@@ -1,689 +1,799 @@
 
-/* =========================================
-   ShareShelf - Main JavaScript
-   ========================================= */
+(() => {
+  "use strict";
 
-const root = document.getElementById("root");
+  const ITEMS_KEY = "shareshelfItems";
+  const MY_ITEMS_KEY = "shareshelfMyItemIds";
+  const THEME_KEY = "shareshelfTheme";
+  const MAX_IMAGE_SIZE = 1.5 * 1024 * 1024;
+  const DEMO_MODE = new URLSearchParams(window.location.search).get("demo") === "1";
 
-const defaultItems = [
+  const categories = [
+    "Books",
+    "Electronics",
+    "Clothing",
+    "Furniture",
+    "Stationery",
+    "Sports",
+    "Other"
+  ];
+
+  const sampleItems = [
     {
-        id: 1,
-        name: "Study Desk",
-        category: "Furniture",
-        type: "Borrow",
-        price: "Free",
-        icon: "🪑",
-        description: "A useful desk for studying."
+      id: "sample-1",
+      name: "Engineering Mathematics Textbook",
+      category: "Books",
+      type: "Borrow",
+      description: "A useful engineering mathematics textbook in good condition.",
+      condition: "Good",
+      location: "Campus",
+      owner: "Aarav",
+      available: true,
+      image: "",
+      createdAt: Date.now() - 100000
     },
     {
-        id: 2,
-        name: "Scientific Calculator",
-        category: "Electronics",
-        type: "Borrow",
-        price: "Free",
-        icon: "🧮",
-        description: "Calculator for college work."
+      id: "sample-2",
+      name: "Scientific Calculator",
+      category: "Electronics",
+      type: "Lend",
+      description: "Scientific calculator available for coursework and exams.",
+      condition: "Like New",
+      location: "Library",
+      owner: "Riya",
+      available: true,
+      image: "",
+      createdAt: Date.now() - 200000
     },
     {
-        id: 3,
-        name: "Programming Books",
-        category: "Books",
-        type: "Sell",
-        price: "₹250",
-        icon: "📚",
-        description: "Programming books for beginners."
-    },
-    {
-        id: 4,
-        name: "Cycle",
-        category: "Transport",
-        type: "Service",
-        price: "₹50/day",
-        icon: "🚲",
-        description: "Cycle available for short-term use."
+      id: "sample-3",
+      name: "Class Notes and Stationery",
+      category: "Stationery",
+      type: "Give Away",
+      description: "Extra notebooks and stationery for another student to use.",
+      condition: "Good",
+      location: "College",
+      owner: "Kabir",
+      available: true,
+      image: "",
+      createdAt: Date.now() - 300000
     }
-];
+  ];
 
-function loadStoredItems() {
+  function readJSON(key, fallback) {
     try {
-        const saved = localStorage.getItem("shareshelfItems");
-        return saved ? JSON.parse(saved) : defaultItems;
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : fallback;
     } catch {
-        return defaultItems;
+      return fallback;
     }
-}
+  }
 
-function loadMyItemIds() {
+  let items = readJSON(ITEMS_KEY, null);
+  if (!Array.isArray(items)) {
+    items = sampleItems;
+    saveItems();
+  }
+
+  let myItemIds = readJSON(MY_ITEMS_KEY, []);
+  if (!Array.isArray(myItemIds)) myItemIds = [];
+
+  let searchText = "";
+  let selectedCategory = "All";
+  let selectedType = "All";
+  let selectedSort = "newest";
+  let selectedAvailability = "all";
+  let activeItemId = null;
+  let uploadedImage = "";
+  let previewObjectUrl = "";
+
+  const root =
+    document.getElementById("app") ||
+    document.getElementById("root") ||
+    document.querySelector("main") ||
+    document.body.appendChild(document.createElement("div"));
+
+  root.id = "app";
+
+  function saveItems() {
     try {
-        return JSON.parse(
-            localStorage.getItem("shareshelfMyItemIds") || "[]"
-        );
+      localStorage.setItem(ITEMS_KEY, JSON.stringify(items));
+      localStorage.setItem(MY_ITEMS_KEY, JSON.stringify(myItemIds));
     } catch {
-        return [];
+      alert("Your browser storage is full. Try uploading a smaller image.");
     }
-}
+  }
 
-let items = loadStoredItems();
-let myItemIds = loadMyItemIds();
-let selectedItem = null;
-
-function saveItems() {
-    localStorage.setItem("shareshelfItems", JSON.stringify(items));
-    localStorage.setItem("shareshelfMyItemIds", JSON.stringify(myItemIds));
-}
-
-function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, character => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
+  function escapeHTML(value = "") {
+    return String(value).replace(/[&<>"']/g, character => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
     })[character]);
-}
+  }
 
-function getIcon(category) {
-    const icons = {
-        Furniture: "🪑",
-        Electronics: "🔌",
-        Books: "📚",
-        Transport: "🚲",
-        Other: "📦"
+  function getItemById(id) {
+    return items.find(item => String(item.id) === String(id));
+  }
+
+  function isMyItem(item) {
+    return myItemIds.includes(item.id);
+  }
+
+  function formatDate(timestamp) {
+    if (!timestamp) return "Recently added";
+    return new Date(timestamp).toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    });
+  }
+
+  function getFilteredItems() {
+    let filtered = [...items];
+
+    if (searchText.trim()) {
+      const query = searchText.toLowerCase().trim();
+      filtered = filtered.filter(item =>
+        [
+          item.name,
+          item.category,
+          item.description,
+          item.location,
+          item.owner,
+          item.type
+        ].some(value => String(value || "").toLowerCase().includes(query))
+      );
+    }
+
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter(item => item.category === selectedCategory);
+    }
+
+    if (selectedType !== "All") {
+      filtered = filtered.filter(item => item.type === selectedType);
+    }
+
+    if (selectedAvailability === "available") {
+      filtered = filtered.filter(item => item.available !== false);
+    } else if (selectedAvailability === "mine") {
+      filtered = filtered.filter(isMyItem);
+    }
+
+    filtered.sort((a, b) => {
+      switch (selectedSort) {
+        case "oldest":
+          return (a.createdAt || 0) - (b.createdAt || 0);
+        case "price-low":
+          return (Number(a.price) || 0) - (Number(b.price) || 0);
+        case "price-high":
+          return (Number(b.price) || 0) - (Number(a.price) || 0);
+        case "name":
+          return String(a.name).localeCompare(String(b.name));
+        default:
+          return (b.createdAt || 0) - (a.createdAt || 0);
+      }
+    });
+
+    return filtered;
+  }
+
+  function itemImage(item) {
+    if (item.image) {
+      return `<img class="item-image" src="${escapeHTML(item.image)}" alt="${escapeHTML(item.name)}">`;
+    }
+
+    const emojiByCategory = {
+      Books: "📚",
+      Electronics: "🎧",
+      Clothing: "👕",
+      Furniture: "🪑",
+      Stationery: "✏️",
+      Sports: "⚽",
+      Other: "🎁"
     };
 
-    return icons[category] || "📦";
-}
+    return `<div class="item-placeholder" aria-label="No image uploaded">
+      <span>${emojiByCategory[item.category] || "📦"}</span>
+    </div>`;
+  }
 
-function actionLabel(item) {
-    if (item.type === "Sell") return "Buy";
-    if (item.type === "Service") return "Get Service";
-    if (item.type === "Borrow") return "Borrow";
-    return "Get item";
-}
-
-/* =========================================
-   Render the complete page
-   ========================================= */
-
-function renderItems() {
-    if (!root) {
-        console.error('ShareShelf needs an element with id="root".');
-        return;
-    }
-
-    root.innerHTML = `
-        <header class="navbar">
-            <a class="logo" href="#">ShareShelf<span>.</span></a>
-
-            <nav>
-                <a href="#browse">Browse</a>
-                <a href="#my-listings">My Listings</a>
-                <a href="#how-it-works">How it works</a>
-
-                <button
-                    class="theme-toggle"
-                    id="themeToggle"
-                    type="button"
-                    aria-label="Switch to dark mode"
-                    title="Switch theme"
-                >🌙</button>
-
-                <button class="primary-btn" id="addItemBtn">
-                    + List an item
-                </button>
-            </nav>
-        </header>
-
-        <main>
-            <section class="hero">
-                <div class="hero-content">
-                    <p class="eyebrow">✦ SHARE MORE · WASTE LESS</p>
-
-                    <h1>
-                        Your campus,<br>
-                        your community.<br>
-                        <span>Share more.</span>
-                    </h1>
-
-                    <p class="hero-description">
-                        Borrow what you need, find pre-loved essentials,
-                        and share your skills with students around you.
-                        Everything your campus community needs, all in one place.
-                    </p>
-
-                    <div class="hero-actions">
-                        <a class="primary-btn hero-btn" href="#browse">
-                            Explore items →
-                        </a>
-
-                        <a class="secondary-btn hero-btn" href="#how-it-works">
-                            How it works
-                        </a>
-                    </div>
-
-                    <div class="hero-trust">
-                        <span>📚 Books</span>
-                        <span>♻️ Reuse</span>
-                        <span>🤝 Community</span>
-                    </div>
-                </div>
-            </section>
-
-            <section class="browse-section" id="browse">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">COMMUNITY MARKETPLACE</p>
-                        <h2>Discover items</h2>
-                    </div>
-
-                    <div class="browse-controls">
-                        <input
-                            id="searchInput"
-                            type="search"
-                            placeholder="Search items..."
-                            aria-label="Search items"
-                        >
-
-                        <select id="categoryFilter" aria-label="Filter category">
-                            <option value="all">All categories</option>
-                            <option value="Furniture">Furniture</option>
-                            <option value="Electronics">Electronics</option>
-                            <option value="Books">Books</option>
-                            <option value="Transport">Transport</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="item-grid" id="itemGrid"></div>
-                <p id="emptyMessage" hidden>No matching items found.</p>
-            </section>
-
-            <section class="my-listings-section" id="my-listings">
-                <p class="eyebrow">YOUR CONTRIBUTIONS</p>
-                <h2>My Listings</h2>
-
-                <p class="section-description">
-                    Manage the items you have added to ShareShelf.
-                </p>
-
-                <div class="item-grid" id="myListingGrid"></div>
-                <p id="myListingsEmpty">You haven't listed any items yet.</p>
-            </section>
-
-            <section class="how-section" id="how-it-works">
-                <p class="eyebrow">SIMPLE AND SUSTAINABLE</p>
-                <h2>Good things are better shared.</h2>
-
-                <div class="steps-grid">
-                    <article>
-                        <span>01</span>
-                        <h3>Discover</h3>
-                        <p>Find useful items in your community.</p>
-                    </article>
-
-                    <article>
-                        <span>02</span>
-                        <h3>Connect</h3>
-                        <p>Find items and explore available options.</p>
-                    </article>
-
-                    <article>
-                        <span>03</span>
-                        <h3>Share</h3>
-                        <p>Borrow, offer services, or sell items responsibly.</p>
-                    </article>
-                </div>
-            </section>
-        </main>
-
-        <footer>
-            © 2026 ShareShelf · Share more, waste less.
-        </footer>
-
-        <dialog id="listingDialog" class="app-dialog">
-            <form id="listingForm">
-                <div class="dialog-heading">
-                    <h2>List an item</h2>
-                    <button
-                        type="button"
-                        class="close-btn"
-                        id="closeListing"
-                        aria-label="Close form"
-                    >✕</button>
-                </div>
-
-                <label for="itemName">Item name</label>
-                <input
-                    id="itemName"
-                    name="itemName"
-                    required
-                    maxlength="80"
-                    placeholder="e.g. Engineering textbook"
-                >
-
-                <label for="itemCategory">Category</label>
-                <select id="itemCategory" name="itemCategory" required>
-                    <option value="Furniture">Furniture</option>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Books">Books</option>
-                    <option value="Transport">Transport</option>
-                    <option value="Other">Other</option>
-                </select>
-
-                <label for="itemType">Listing type</label>
-                <select id="itemType" name="itemType" required>
-                    <option value="Borrow">Borrow</option>
-                    <option value="Service">Service</option>
-                    <option value="Sell">Sell</option>
-                    <option value="Give away">Give away</option>
-                </select>
-
-                <label for="itemPrice">Price or terms</label>
-                <input
-                    id="itemPrice"
-                    name="itemPrice"
-                    required
-                    maxlength="40"
-                    placeholder="e.g. Free, ₹100, ₹50/day"
-                >
-
-                <label for="itemDescription">Description</label>
-                <textarea
-                    id="itemDescription"
-                    name="itemDescription"
-                    rows="3"
-                    maxlength="300"
-                    placeholder="Describe your item"
-                ></textarea>
-
-                <button type="submit" class="primary-btn submit-btn">
-                    Publish item
-                </button>
-            </form>
-        </dialog>
-
-        <dialog id="detailsDialog" class="app-dialog">
-            <div class="dialog-heading">
-                <h2>Item details</h2>
-                <button
-                    type="button"
-                    class="close-btn"
-                    id="closeDetails"
-                    aria-label="Close details"
-                >✕</button>
-            </div>
-
-            <div id="detailsContent"></div>
-
-            <button type="button" class="primary-btn" id="detailsDone">
-                Done
-            </button>
-        </dialog>
-
-        <dialog id="actionDialog" class="app-dialog">
-            <div class="dialog-heading">
-                <h2 id="actionTitle">Item request</h2>
-                <button
-                    type="button"
-                    class="close-btn"
-                    id="closeAction"
-                    aria-label="Close"
-                >✕</button>
-            </div>
-
-            <div id="actionContent"></div>
-
-            <button type="button" class="primary-btn" id="confirmAction">
-                Confirm interest
-            </button>
-
-            <p id="actionMessage" role="status"></p>
-        </dialog>
-    `;
-
-    setupPageEvents();
-    setupThemeToggle();
-    updateItems();
-    updateMyListings();
-}
-
-/* =========================================
-   Item cards
-   ========================================= */
-
-function createItemCard(item, isMine = false) {
-    const imageHTML = item.image
-        ? `<img
-                class="item-image"
-                src="${escapeHTML(item.image)}"
-                alt="${escapeHTML(item.name)}"
-                loading="lazy"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-           >`
-        : "";
+  function renderCard(item) {
+    const mine = isMyItem(item);
+    const availability = item.available === false ? "Unavailable" : "Available";
 
     return `
-        <article class="item-card">
-            <div class="item-image-wrap">
-                ${imageHTML}
+      <article class="item-card">
+        <div class="item-card-image">
+          ${itemImage(item)}
+          <span class="category-badge">${escapeHTML(item.category || "Other")}</span>
+          ${item.available === false
+            ? '<span class="unavailable-badge">Unavailable</span>'
+            : ""}
+        </div>
 
-                <div
-                    class="item-image-placeholder"
-                    style="display:${item.image ? "none" : "flex"};"
-                >
-                    <span>${getIcon(item.category)}</span>
-                </div>
+        <div class="item-card-body">
+          <div class="item-card-topline">
+            <span class="type-label">${escapeHTML(item.type || "Borrow")}</span>
+            <span class="availability-dot ${item.available === false ? "off" : ""}">
+              ${availability}
+            </span>
+          </div>
 
-                <span class="item-category-badge">
-                    ${escapeHTML(item.category)}
-                </span>
-            </div>
+          <h3>${escapeHTML(item.name)}</h3>
+          <p class="item-description">${escapeHTML(item.description || "No description provided.")}</p>
 
-            <div class="item-card-content">
-                <div class="item-card-heading">
-                    <h3>${escapeHTML(item.name)}</h3>
-                </div>
+          <div class="item-meta">
+            <span>📍 ${escapeHTML(item.location || "Campus")}</span>
+            <span>👤 ${escapeHTML(item.owner || "Student")}</span>
+          </div>
 
-                <p class="item-description">
-                    ${escapeHTML(item.description || "No description provided.")}
-                </p>
+          <div class="item-card-footer">
+            <span class="item-date">${formatDate(item.createdAt)}</span>
+            <button class="btn btn-primary btn-small" data-action="details" data-id="${escapeHTML(item.id)}">
+              View details
+            </button>
+          </div>
 
-                <div class="item-meta">
-                    <span class="item-type">${escapeHTML(item.type)}</span>
-                    <span class="item-price">
-                        ${escapeHTML(item.price ?? "Contact owner")}
-                    </span>
-                </div>
-
-                <div class="item-card-actions">
-                    <button
-                        class="text-btn details-btn"
-                        data-action="details"
-                        data-id="${item.id}"
-                    >View details</button>
-
-                    ${
-                        !isMine
-                            ? `<button
-                                    class="primary-btn action-btn"
-                                    data-action="request"
-                                    data-id="${item.id}"
-                               >${actionLabel(item)}</button>`
-                            : `<button
-                                    class="remove-btn"
-                                    data-action="remove"
-                                    data-id="${item.id}"
-                               >Remove listing</button>`
-                    }
-                </div>
-            </div>
-        </article>
+          ${mine ? `
+            <button class="btn btn-outline btn-full manage-toggle" data-action="toggle-availability" data-id="${escapeHTML(item.id)}">
+              ${item.available === false ? "Mark available" : "Mark unavailable"}
+            </button>
+            <button class="text-button delete-item" data-action="delete" data-id="${escapeHTML(item.id)}">
+              Delete my listing
+            </button>
+          ` : ""}
+        </div>
+      </article>
     `;
-}
+  }
 
-/* =========================================
-   Update and search listings
-   ========================================= */
+  function renderItems() {
+    const grid = document.getElementById("itemsGrid");
+    const count = document.getElementById("resultsCount");
+    if (!grid || !count) return;
 
-function updateItems() {
-    const searchInput = document.getElementById("searchInput");
-    const categoryFilter = document.getElementById("categoryFilter");
-    const grid = document.getElementById("itemGrid");
-    const emptyMessage = document.getElementById("emptyMessage");
+    const filtered = getFilteredItems();
 
-    if (!searchInput || !categoryFilter || !grid || !emptyMessage) return;
+    count.textContent = `${filtered.length} ${filtered.length === 1 ? "item" : "items"} found`;
 
-    const query = searchInput.value.trim().toLowerCase();
-    const category = categoryFilter.value;
+    if (!filtered.length) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔎</div>
+          <h3>No items found</h3>
+          <p>Try another search term or change your filters.</p>
+          <button class="btn btn-outline" id="clearFilters">Clear filters</button>
+        </div>
+      `;
+      document.getElementById("clearFilters").addEventListener("click", clearFilters);
+      return;
+    }
 
-    const filtered = items.filter(item => {
-        const searchableText = `
-            ${item.name}
-            ${item.category}
-            ${item.type}
-            ${item.description}
-        `.toLowerCase();
+    grid.innerHTML = filtered.map(renderCard).join("");
+  }
 
-        return searchableText.includes(query) &&
-            (category === "all" || item.category === category);
-    });
+  function renderApp() {
+    const currentTheme = localStorage.getItem(THEME_KEY) || "light";
+    document.documentElement.dataset.theme = currentTheme;
 
-    grid.innerHTML = filtered.map(item => createItemCard(item)).join("");
-    emptyMessage.hidden = filtered.length > 0;
-}
+    root.innerHTML = `
+      <div class="site-shell">
+        ${DEMO_MODE ? `
+          <aside class="demo-banner" role="status">
+            <div><strong>Interactive demo</strong><span>Explore sample listings and try the filters. Changes stay in this browser.</span></div>
+            <a class="btn btn-primary btn-small" href="/">Sign up to join</a>
+          </aside>
+        ` : ""}
+        <header class="site-header">
+          <a href="#" class="brand" id="homeLink" aria-label="ShareShelf home">
+            <span class="brand-mark">S</span>
+            <span>Share<span class="brand-accent">Shelf</span>
+              <small>Share more. Waste less.</small>
+            </span>
+          </a>
 
-function updateMyListings() {
-    const listingGrid = document.getElementById("myListingGrid");
-    const emptyMessage = document.getElementById("myListingsEmpty");
+          <nav class="header-actions" aria-label="Main navigation">
+            <a href="#browse" class="nav-link">Browse items</a>
+            <button class="btn btn-outline theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">
+              <span id="themeIcon">${currentTheme === "dark" ? "☀️" : "🌙"}</span>
+              <span id="themeLabel">${currentTheme === "dark" ? "Light mode" : "Dark mode"}</span>
+            </button>
+            <button class="btn btn-primary" id="openListing">＋ List an item</button>
+          </nav>
+        </header>
 
-    if (!listingGrid || !emptyMessage) return;
+        <section class="hero">
+          <div class="hero-content">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> THE CAMPUS SHARING COMMUNITY</span>
+            <h1>Good things deserve<br><span>another life.</span></h1>
+            <p>Borrow, lend, and pass things along. Find what you need from your campus community instead of buying something new.</p>
+            <div class="hero-actions">
+              <a href="#browse" class="btn btn-primary btn-large">Explore items <span>→</span></a>
+              <button class="btn btn-soft btn-large" id="heroListItem">＋ Share an item</button>
+            </div>
+            <div class="hero-stats">
+              <div><strong id="totalItems">0</strong><span>Items listed</span></div>
+              <div><strong id="availableItems">0</strong><span>Available now</span></div>
+              <div><strong>♻️</strong><span>Reuse together</span></div>
+            </div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="art-circle circle-one"></div>
+            <div class="art-circle circle-two"></div>
+            <div class="floating-card book-card"><span>📚</span><div><b>Books</b><small>Pass knowledge on</small></div></div>
+            <div class="floating-card headphones-card"><span>🎧</span><div><b>Electronics</b><small>Share the good stuff</small></div></div>
+            <div class="floating-card plant-card"><span>🌱</span><div><b>Less waste</b><small>More community</small></div></div>
+            <div class="art-center">SHARE<br><span>♻</span><br>SHELF</div>
+          </div>
+        </section>
 
-    const mine = items.filter(item => myItemIds.includes(item.id));
+        <section class="how-section">
+          <div class="section-heading">
+            <span class="eyebrow">SIMPLE BY DESIGN</span>
+            <h2>Sharing starts here</h2>
+            <p>Three simple steps to make campus life a little easier.</p>
+          </div>
+          <div class="steps-grid">
+            <article class="step-card"><span class="step-number">01</span><div class="step-icon">🔎</div><h3>Find what you need</h3><p>Explore books, gadgets, stationery, and more shared by students.</p></article>
+            <article class="step-card"><span class="step-number">02</span><div class="step-icon">🤝</div><h3>Connect and share</h3><p>Check item details and send a request to arrange a handover.</p></article>
+            <article class="step-card"><span class="step-number">03</span><div class="step-icon">🌿</div><h3>Keep things in use</h3><p>Give useful items another life and help reduce unnecessary waste.</p></article>
+          </div>
+        </section>
 
-    listingGrid.innerHTML = mine
-        .map(item => createItemCard(item, true))
-        .join("");
+        <section class="browse-section" id="browse">
+          <div class="section-heading section-heading-left">
+            <span class="eyebrow">THE COMMUNITY SHELF</span>
+            <h2>Find your next useful thing.</h2>
+            <p>Browse what other students are sharing.</p>
+          </div>
 
-    emptyMessage.hidden = mine.length > 0;
-}
+          <div class="filter-panel">
+            <label class="search-box">
+              <span>⌕</span>
+              <input id="searchInput" type="search" placeholder="Search items, categories, or locations..." autocomplete="off">
+              <kbd>Search</kbd>
+            </label>
 
-/* =========================================
-   Item details and demo requests
-   ========================================= */
+            <div class="filter-row">
+              <label class="filter-control">
+                <span>Category</span>
+                <select id="categoryFilter">
+                  <option value="All">All categories</option>
+                  ${categories.map(category => `<option value="${escapeHTML(category)}">${escapeHTML(category)}</option>`).join("")}
+                </select>
+              </label>
 
-function showDetails(id) {
-    const item = items.find(entry => entry.id === id);
+              <label class="filter-control">
+                <span>Listing type</span>
+                <select id="typeFilter">
+                  <option value="All">All types</option>
+                  <option value="Borrow">Borrow</option>
+                  <option value="Lend">Lend</option>
+                  <option value="Give Away">Give away</option>
+                  <option value="Exchange">Exchange</option>
+                </select>
+              </label>
+
+              <label class="filter-control">
+                <span>Show</span>
+                <select id="availabilityFilter">
+                  <option value="all">All listings</option>
+                  <option value="available">Available only</option>
+                  <option value="mine">My listings</option>
+                </select>
+              </label>
+
+              <label class="filter-control">
+                <span>Sort by</span>
+                <select id="sortFilter">
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="name">Name: A–Z</option>
+                  <option value="price-low">Price: low to high</option>
+                  <option value="price-high">Price: high to low</option>
+                </select>
+              </label>
+
+              <button class="btn btn-outline reset-filters" id="resetFilters">Reset</button>
+            </div>
+          </div>
+
+          <div class="results-bar">
+            <p id="resultsCount">0 items found</p>
+            <span>Made for students, by students 💚</span>
+          </div>
+
+          <div class="items-grid" id="itemsGrid"></div>
+        </section>
+
+        <section class="cta-section">
+          <div class="cta-icon">📦</div>
+          <div><span class="eyebrow">HAVE SOMETHING TO SHARE?</span><h2>Someone else might need it.</h2><p>List a useful item and help someone in your campus community.</p></div>
+          <button class="btn btn-light btn-large" id="ctaListItem">List an item <span>→</span></button>
+        </section>
+
+        <footer class="site-footer">
+          <a href="#" class="brand footer-brand"><span class="brand-mark">S</span><span>Share<span class="brand-accent">Shelf</span><small>Share more. Waste less.</small></span></a>
+          <p>A small share can make a big difference. 🌱</p>
+          <span>© ${new Date().getFullYear()} ShareShelf · Campus sharing demo</span>
+        </footer>
+      </div>
+
+      <div class="modal-backdrop hidden" id="listingModal" role="dialog" aria-modal="true" aria-labelledby="listingModalTitle">
+        <div class="modal-card">
+          <div class="modal-heading"><div><span class="eyebrow">GIVE SOMETHING A NEW HOME</span><h2 id="listingModalTitle">List an item</h2></div><button class="close-btn" type="button" data-close="listingModal" aria-label="Close form">✕</button></div>
+          <form id="listingForm">
+            <label for="itemName">Item name <span class="required">*</span></label>
+            <input id="itemName" name="itemName" required maxlength="80" placeholder="e.g. Engineering textbook">
+
+            <div class="form-grid">
+              <div><label for="itemCategory">Category <span class="required">*</span></label><select id="itemCategory" name="itemCategory" required>${categories.map(category => `<option value="${escapeHTML(category)}">${escapeHTML(category)}</option>`).join("")}</select></div>
+              <div><label for="itemType">Listing type <span class="required">*</span></label><select id="itemType" name="itemType" required><option>Borrow</option><option>Lend</option><option>Give Away</option><option>Exchange</option></select></div>
+            </div>
+
+            <label for="itemDescription">Description <span class="required">*</span></label>
+            <textarea id="itemDescription" name="itemDescription" rows="3" required maxlength="500" placeholder="Describe the item's condition and how it can be used..."></textarea>
+
+            <div class="form-grid">
+              <div><label for="itemCondition">Condition</label><select id="itemCondition" name="itemCondition"><option>Good</option><option>Like New</option><option>Fair</option><option>Needs Repair</option></select></div>
+              <div><label for="itemLocation">Pickup location</label><input id="itemLocation" name="itemLocation" maxlength="100" placeholder="e.g. College library"></div>
+            </div>
+
+            <label for="itemOwner">Your name <span class="required">*</span></label>
+            <input id="itemOwner" name="itemOwner" required maxlength="60" placeholder="Enter your name">
+
+            <label for="itemImage">Item image (optional)</label>
+            <input id="itemImage" name="itemImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+            <p class="field-hint">PNG, JPG, WEBP or GIF. Maximum size: 1.5 MB.</p>
+            <div id="imagePreview" class="image-preview hidden"></div>
+
+            <div class="form-actions"><button type="button" class="btn btn-outline" data-close="listingModal">Cancel</button><button type="submit" class="btn btn-primary">Publish listing</button></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal-backdrop hidden" id="detailsModal" role="dialog" aria-modal="true" aria-labelledby="detailsTitle">
+        <div class="modal-card details-modal-card">
+          <button class="close-btn floating-close" type="button" data-close="detailsModal" aria-label="Close details">✕</button>
+          <div id="detailsContent"></div>
+        </div>
+      </div>
+
+      <div class="modal-backdrop hidden" id="requestModal" role="dialog" aria-modal="true" aria-labelledby="requestTitle">
+        <div class="modal-card">
+          <div class="modal-heading"><div><span class="eyebrow">MAKE A CONNECTION</span><h2 id="requestTitle">Request this item</h2></div><button class="close-btn" type="button" data-close="requestModal" aria-label="Close request form">✕</button></div>
+          <form id="requestForm">
+            <input type="hidden" id="requestItemId">
+            <p class="request-item-name" id="requestItemName"></p>
+            <label for="requesterName">Your name <span class="required">*</span></label>
+            <input id="requesterName" required maxlength="60" placeholder="Enter your name">
+            <label for="requesterContact">Contact information <span class="required">*</span></label>
+            <input id="requesterContact" required maxlength="100" placeholder="Email or other contact">
+            <label for="requestMessage">Message</label>
+            <textarea id="requestMessage" rows="3" maxlength="300" placeholder="Tell the owner when you would like to collect it..."></textarea>
+            <p class="field-hint">Demo only: this request will be shown on screen and won't be sent to the owner.</p>
+            <div class="form-actions"><button type="button" class="btn btn-outline" data-close="requestModal">Cancel</button><button type="submit" class="btn btn-primary">Submit request</button></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    `;
+
+    bindEvents();
+    updateStats();
+    renderItems();
+  }
+
+  function updateStats() {
+    const total = document.getElementById("totalItems");
+    const available = document.getElementById("availableItems");
+    if (total) total.textContent = items.length;
+    if (available) available.textContent = items.filter(item => item.available !== false).length;
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(showToast.timeout);
+    showToast.timeout = setTimeout(() => toast.classList.remove("show"), 2800);
+  }
+
+  function openModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    document.body.classList.add("modal-open");
+    const firstInput = modal.querySelector("input:not([type=hidden]), select, textarea");
+    if (firstInput) setTimeout(() => firstInput.focus(), 50);
+  }
+
+  function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.add("hidden");
+    if (!document.querySelector(".modal-backdrop:not(.hidden)")) {
+      document.body.classList.remove("modal-open");
+    }
+    if (id === "listingModal") {
+      const form = document.getElementById("listingForm");
+      if (form) form.reset();
+      uploadedImage = "";
+      const preview = document.getElementById("imagePreview");
+      if (preview) {
+        preview.innerHTML = "";
+        preview.classList.add("hidden");
+      }
+      const fileInput = document.getElementById("itemImage");
+      if (fileInput) fileInput.value = "";
+    }
+  }
+
+  function openDetails(id) {
+    const item = getItemById(id);
     if (!item) return;
+    activeItemId = item.id;
 
     document.getElementById("detailsContent").innerHTML = `
-        <div class="details-icon">${getIcon(item.category)}</div>
-        <h3>${escapeHTML(item.name)}</h3>
-        <p><strong>Category:</strong> ${escapeHTML(item.category)}</p>
-        <p><strong>Listing type:</strong> ${escapeHTML(item.type)}</p>
-        <p><strong>Price or terms:</strong> ${escapeHTML(item.price)}</p>
-        <p><strong>Description:</strong> ${escapeHTML(item.description)}</p>
+      <div class="details-image">${itemImage(item)}</div>
+      <div class="details-body">
+        <div class="details-badges"><span class="category-badge">${escapeHTML(item.category)}</span><span class="type-label">${escapeHTML(item.type)}</span></div>
+        <h2 id="detailsTitle">${escapeHTML(item.name)}</h2>
+        <p class="details-description">${escapeHTML(item.description || "No description provided.")}</p>
+        <div class="details-info">
+          <div><span>Condition</span><strong>${escapeHTML(item.condition || "Good")}</strong></div>
+          <div><span>Pickup location</span><strong>${escapeHTML(item.location || "Campus")}</strong></div>
+          <div><span>Listed by</span><strong>${escapeHTML(item.owner || "Student")}</strong></div>
+          <div><span>Added on</span><strong>${formatDate(item.createdAt)}</strong></div>
+          <div><span>Status</span><strong>${item.available === false ? "Unavailable" : "Available"}</strong></div>
+        </div>
+        ${isMyItem(item)
+          ? '<p class="owner-note">This is your listing. You can manage its availability from the item card.</p>'
+          : item.available === false
+            ? '<button class="btn btn-outline btn-full" disabled>Currently unavailable</button>'
+            : '<button class="btn btn-primary btn-full" id="requestItemBtn">Request this item →</button>'}
+      </div>
     `;
 
-    document.getElementById("detailsDialog").showModal();
-}
+    openModal("detailsModal");
 
-function showAction(id) {
-    selectedItem = items.find(item => item.id === id);
-    if (!selectedItem) return;
-
-    document.getElementById("actionTitle").textContent =
-        actionLabel(selectedItem) + " item";
-
-    document.getElementById("actionContent").innerHTML = `
-        <h3>${escapeHTML(selectedItem.name)}</h3>
-        <p><strong>Price or terms:</strong> ${escapeHTML(selectedItem.price)}</p>
-        <p>This is a demonstration only. No payment or real request will be sent.</p>
-    `;
-
-    document.getElementById("actionMessage").textContent = "";
-    document.getElementById("confirmAction").hidden = false;
-    document.getElementById("actionDialog").showModal();
-}
-
-function handleCardClick(event) {
-    const button = event.target.closest("[data-action]");
-    if (!button) return;
-
-    const id = Number(button.dataset.id);
-
-    if (button.dataset.action === "details") {
-        showDetails(id);
+    const requestButton = document.getElementById("requestItemBtn");
+    if (requestButton) {
+      requestButton.addEventListener("click", () => {
+        closeModal("detailsModal");
+        document.getElementById("requestItemId").value = item.id;
+        document.getElementById("requestItemName").textContent = `Requesting: ${item.name}`;
+        openModal("requestModal");
+      });
     }
+  }
 
-    if (button.dataset.action === "request") {
-        showAction(id);
-    }
+  function clearFilters() {
+    searchText = "";
+    selectedCategory = "All";
+    selectedType = "All";
+    selectedAvailability = "all";
+    selectedSort = "newest";
 
-    if (button.dataset.action === "remove") {
-        if (!window.confirm("Are you sure you want to remove this listing?")) {
-            return;
-        }
+    document.getElementById("searchInput").value = "";
+    document.getElementById("categoryFilter").value = "All";
+    document.getElementById("typeFilter").value = "All";
+    document.getElementById("availabilityFilter").value = "all";
+    document.getElementById("sortFilter").value = "newest";
+    renderItems();
+  }
 
-        items = items.filter(item => item.id !== id);
-        myItemIds = myItemIds.filter(itemId => itemId !== id);
+  function setTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+    const icon = document.getElementById("themeIcon");
+    const label = document.getElementById("themeLabel");
+    if (icon) icon.textContent = theme === "dark" ? "☀️" : "🌙";
+    if (label) label.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+  }
 
-        saveItems();
-        updateItems();
-        updateMyListings();
-    }
-}
-
-/* =========================================
-   Page event listeners
-   ========================================= */
-
-function setupPageEvents() {
-    const grid = document.getElementById("itemGrid");
-    const listingGrid = document.getElementById("myListingGrid");
-
-    document.getElementById("searchInput")
-        .addEventListener("input", updateItems);
-
-    document.getElementById("categoryFilter")
-        .addEventListener("change", updateItems);
-
-    document.getElementById("addItemBtn")
-        .addEventListener("click", () => {
-            document.getElementById("listingDialog").showModal();
-        });
-
-    document.getElementById("closeListing")
-        .addEventListener("click", () => {
-            document.getElementById("listingDialog").close();
-        });
-
-    document.getElementById("closeDetails")
-        .addEventListener("click", () => {
-            document.getElementById("detailsDialog").close();
-        });
-
-    document.getElementById("detailsDone")
-        .addEventListener("click", () => {
-            document.getElementById("detailsDialog").close();
-        });
-
-    document.getElementById("closeAction")
-        .addEventListener("click", () => {
-            document.getElementById("actionDialog").close();
-        });
-
-    document.getElementById("confirmAction")
-        .addEventListener("click", () => {
-            if (!selectedItem) return;
-
-            document.getElementById("actionMessage").textContent =
-                "Demo confirmation recorded. Real requests require owner contact details and a backend.";
-
-            document.getElementById("confirmAction").hidden = true;
-        });
-
-    grid.addEventListener("click", handleCardClick);
-    listingGrid.addEventListener("click", handleCardClick);
-
-    document.getElementById("listingForm")
-        .addEventListener("submit", event => {
-            event.preventDefault();
-
-            const form = event.currentTarget;
-            const data = new FormData(form);
-
-            const newItem = {
-                id: Date.now(),
-                name: data.get("itemName").trim(),
-                category: data.get("itemCategory"),
-                type: data.get("itemType"),
-                price: data.get("itemPrice").trim(),
-                description: data.get("itemDescription").trim()
-                    || "No description provided."
-            };
-
-            if (!newItem.name || !newItem.price) return;
-
-            items.unshift(newItem);
-            myItemIds.push(newItem.id);
-
-            saveItems();
-            form.reset();
-
-            document.getElementById("listingDialog").close();
-            document.getElementById("searchInput").value = "";
-            document.getElementById("categoryFilter").value = "all";
-
-            updateItems();
-            updateMyListings();
-
-            document.getElementById("browse")
-                .scrollIntoView({ behavior: "smooth" });
-        });
-}
-
-/* =========================================
-   One global theme controller
-   ========================================= */
-
-function setupThemeToggle() {
-    const themeToggle = document.getElementById("themeToggle");
-    if (!themeToggle) return;
-
-    const storageKey = "shareshelf-theme";
-
-    function applyTheme(theme) {
-        const isDark = theme === "dark";
-
-        document.documentElement.setAttribute(
-            "data-theme",
-            isDark ? "dark" : "light"
-        );
-
-        // Supports CSS rules that use body.dark-mode too.
-        document.body.classList.toggle("dark-mode", isDark);
-
-        themeToggle.textContent = isDark ? "☀️" : "🌙";
-
-        themeToggle.setAttribute(
-            "aria-label",
-            isDark ? "Switch to light mode" : "Switch to dark mode"
-        );
-
-        themeToggle.title = isDark
-            ? "Switch to light mode"
-            : "Switch to dark mode";
-    }
-
-    let savedTheme;
-
-    try {
-        savedTheme = localStorage.getItem(storageKey);
-    } catch {
-        savedTheme = null;
-    }
-
-    applyTheme(savedTheme === "dark" ? "dark" : "light");
-
-    themeToggle.addEventListener("click", () => {
-        const currentTheme =
-            document.documentElement.getAttribute("data-theme");
-
-        const nextTheme = currentTheme === "dark" ? "light" : "dark";
-
-        applyTheme(nextTheme);
-
-        try {
-            localStorage.setItem(storageKey, nextTheme);
-        } catch (error) {
-            console.warn("Theme preference could not be saved.", error);
-        }
+  function bindEvents() {
+    document.getElementById("searchInput").addEventListener("input", event => {
+      searchText = event.target.value;
+      renderItems();
     });
-}
 
-/* =========================================
-   Start ShareShelf
-   ========================================= */
+    document.getElementById("categoryFilter").addEventListener("change", event => {
+      selectedCategory = event.target.value;
+      renderItems();
+    });
 
-renderItems();
+    document.getElementById("typeFilter").addEventListener("change", event => {
+      selectedType = event.target.value;
+      renderItems();
+    });
+
+    document.getElementById("availabilityFilter").addEventListener("change", event => {
+      selectedAvailability = event.target.value;
+      renderItems();
+    });
+
+    document.getElementById("sortFilter").addEventListener("change", event => {
+      selectedSort = event.target.value;
+      renderItems();
+    });
+
+    document.getElementById("resetFilters").addEventListener("click", clearFilters);
+
+    ["openListing", "heroListItem", "ctaListItem"].forEach(id => {
+      document.getElementById(id).addEventListener("click", () => openModal("listingModal"));
+    });
+
+    document.getElementById("homeLink").addEventListener("click", event => {
+      event.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      const current = document.documentElement.dataset.theme || "light";
+      setTheme(current === "dark" ? "light" : "dark");
+    });
+
+    root.addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-action]");
+      if (!actionButton) return;
+
+      const { action, id } = actionButton.dataset;
+      const item = getItemById(id);
+      if (!item) return;
+
+      if (action === "details") openDetails(id);
+
+      if (action === "toggle-availability") {
+        item.available = item.available === false;
+        saveItems();
+        updateStats();
+        renderItems();
+        showToast(item.available ? "Listing marked available." : "Listing marked unavailable.");
+      }
+
+      if (action === "delete") {
+        if (!confirm(`Delete "${item.name}" from your listings?`)) return;
+        items = items.filter(entry => entry.id !== item.id);
+        myItemIds = myItemIds.filter(itemId => itemId !== item.id);
+        saveItems();
+        updateStats();
+        renderItems();
+        showToast("Your listing was deleted.");
+      }
+    });
+
+    document.querySelectorAll("[data-close]").forEach(button => {
+      button.addEventListener("click", () => closeModal(button.dataset.close));
+    });
+
+    document.querySelectorAll(".modal-backdrop").forEach(modal => {
+      modal.addEventListener("click", event => {
+        if (event.target === modal) closeModal(modal.id);
+      });
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        document.querySelectorAll(".modal-backdrop:not(.hidden)").forEach(modal => closeModal(modal.id));
+      }
+    });
+
+    document.getElementById("itemImage").addEventListener("change", handleImageUpload);
+    document.getElementById("listingForm").addEventListener("submit", handleListingSubmit);
+    document.getElementById("requestForm").addEventListener("submit", handleRequestSubmit);
+  }
+
+  function handleImageUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    const preview = document.getElementById("imagePreview");
+
+    uploadedImage = "";
+    preview.innerHTML = "";
+    preview.classList.add("hidden");
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Please select an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      showToast("Image is too large. Please choose one under 1.5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      uploadedImage = String(reader.result || "");
+      preview.innerHTML = `
+        <img src="${uploadedImage}" alt="Selected item preview">
+        <div><strong>Image preview</strong><span>${escapeHTML(file.name)}</span></div>
+        <button type="button" id="removeImage" class="text-button">Remove</button>
+      `;
+      preview.classList.remove("hidden");
+      document.getElementById("removeImage").addEventListener("click", () => {
+        uploadedImage = "";
+        event.target.value = "";
+        preview.innerHTML = "";
+        preview.classList.add("hidden");
+      });
+    };
+
+    reader.onerror = () => showToast("Could not read that image. Try another one.");
+    reader.readAsDataURL(file);
+  }
+
+  function handleListingSubmit(event) {
+    event.preventDefault();
+
+    const name = document.getElementById("itemName").value.trim();
+    const description = document.getElementById("itemDescription").value.trim();
+    const owner = document.getElementById("itemOwner").value.trim();
+
+    if (!name || !description || !owner) {
+      showToast("Please complete all required fields.");
+      return;
+    }
+
+    const newItem = {
+      id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      category: document.getElementById("itemCategory").value,
+      type: document.getElementById("itemType").value,
+      description,
+      condition: document.getElementById("itemCondition").value,
+      location: document.getElementById("itemLocation").value.trim() || "Campus",
+      owner,
+      available: true,
+      image: uploadedImage,
+      createdAt: Date.now()
+    };
+
+    items.unshift(newItem);
+    myItemIds.push(newItem.id);
+    saveItems();
+    updateStats();
+    closeModal("listingModal");
+    clearFilters();
+    document.getElementById("browse").scrollIntoView({ behavior: "smooth" });
+    showToast("Your item has been listed!");
+  }
+
+  function handleRequestSubmit(event) {
+    event.preventDefault();
+
+    const item = getItemById(document.getElementById("requestItemId").value);
+    const requester = document.getElementById("requesterName").value.trim();
+    const contact = document.getElementById("requesterContact").value.trim();
+    const message = document.getElementById("requestMessage").value.trim();
+
+    if (!item || !requester || !contact) {
+      showToast("Please complete the required fields.");
+      return;
+    }
+
+    closeModal("requestModal");
+    document.getElementById("requestForm").reset();
+
+    alert(
+      "Demo request created!\n\n" +
+      `Item: ${item.name}\n` +
+      `Owner: ${item.owner}\n` +
+      `Your name: ${requester}\n` +
+      `Contact: ${contact}\n` +
+      `Message: ${message || "No message added"}\n\n` +
+      "This demo does not send the request to the owner."
+    );
+  }
+
+  renderApp();
+})();
