@@ -188,7 +188,7 @@ function renderItems() {
 
     function actionLabel(item) {
         if (item.type === "Sell") return "Buy";
-        if (item.type === "Rent") return "Rent";
+        if (item.type === "Service") return "Get Service";
         if (item.type === "Borrow") return "Borrow";
         return "Get item";
     }
