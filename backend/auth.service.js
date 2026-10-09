@@ -1,7 +1,6 @@
-import { supabaseAdmin, supabaseAuthClient } from './supabase.js';
+import { supabaseAuthClient } from './supabase.js';
 import { env, isAllowedEmail } from './Env.js';
 import { AppError } from './middleware/errorHandler.js';
-import { unwrap } from './helpers.js';
 import { ensureProfile } from './profile.service.js';
 
 const sessionOut = (s) =>
@@ -11,7 +10,7 @@ const sessionOut = (s) =>
     expires_at: s.expires_at,
   };
 
-export async function signUp({ email, password, full_name, college, phone }) {
+export async function signUp({ email, password, full_name }) {
   if (!isAllowedEmail(email)) {
     const domains = env.allowedEmailDomains.map((d) => `@${d}`).join(', ');
     throw new AppError(400, `Please sign up with your college email (${domains})`);
@@ -26,12 +25,6 @@ export async function signUp({ email, password, full_name, college, phone }) {
   if (!data.user || data.user.identities?.length === 0) {
     throw new AppError(409, 'An account with this email already exists');
   }
-
-  unwrap(
-    await supabaseAdmin
-      .from('profiles')
-      .upsert({ id: data.user.id, email, full_name, college, phone }, { onConflict: 'id' })
-  );
 
   return {
     user: { id: data.user.id, email },

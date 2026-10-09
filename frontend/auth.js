@@ -22,7 +22,7 @@ function showAuthScreen(mode = "login", message = "") {
                 <h1>${isSignup ? "Create your account" : "Welcome back"}</h1>
                 <p class="auth-subtitle">
                     ${isSignup
-                        ? "Register to join your student sharing community."
+                        ? "Create an account with your campus email to join your student sharing community."
                         : "Log in to continue to your student sharing community."}
                 </p>
 
@@ -41,16 +41,6 @@ function showAuthScreen(mode = "login", message = "") {
                         <input id="studentName" name="studentName"
                             type="text" placeholder="Enter your full name"
                             autocomplete="name" required>
-
-                        <label for="collegeName">College Name</label>
-                        <input id="collegeName" name="collegeName"
-                            type="text" placeholder="Enter your college name"
-                            required>
-
-                        <label for="enrollmentNumber">Enrolment Number</label>
-                        <input id="enrollmentNumber" name="enrollmentNumber"
-                            type="text" placeholder="Enter your enrolment number"
-                            required>
                     ` : ""}
 
                     <label for="email">Email ID</label>
@@ -118,11 +108,8 @@ async function handleAuthSubmit(event, mode) {
     let endpoint = "/api/auth/login";
 
     if (mode === "signup") {
-        endpoint = "/api/auth/register";
-        payload.studentName = String(formData.get("studentName") || "").trim();
-        payload.collegeName = String(formData.get("collegeName") || "").trim();
-        payload.enrollmentNumber =
-            String(formData.get("enrollmentNumber") || "").trim();
+        endpoint = "/api/auth/signup";
+        payload.full_name = String(formData.get("studentName") || "").trim();
     }
 
     submitButton.disabled = true;
@@ -142,20 +129,25 @@ async function handleAuthSubmit(event, mode) {
 
         if (!response.ok) {
             throw new Error(
-                result.message || result.error || "Something went wrong."
+                result.error?.message ||
+                result.message ||
+                (typeof result.error === "string" ? result.error : "") ||
+                "Something went wrong."
             );
         }
 
         if (mode === "signup") {
             showAuthScreen(
                 "login",
-                result.message || "Account created. Please log in."
+                result.email_confirmation_required
+                    ? "Account created. Check your email to confirm it before logging in."
+                    : "Account created. Please log in."
             );
             return;
         }
 
-        // This example expects the backend to return a token.
-        const token = result.token || result.accessToken;
+        const token =
+            result.session?.access_token || result.token || result.accessToken;
 
         if (!token) {
             throw new Error(
@@ -169,8 +161,9 @@ async function handleAuthSubmit(event, mode) {
 
         window.location.reload();
     } catch (error) {
-        message.textContent =
-            error.message || "Unable to connect to the server.";
+        message.textContent = error instanceof TypeError
+            ? `Unable to reach the ShareShelf API at ${API_BASE_URL}. Start the backend server and open the site at http://localhost:5000.`
+            : error.message || "Unable to connect to the server.";
     } finally {
         // The page may be reloaded after successful login.
         if (document.getElementById("authSubmit")) {
@@ -209,5 +202,7 @@ if (sessionStorage.getItem("shareshelfToken")) {
 }
 window.showAuthScreen = showAuthScreen;
 window.addEventListener("DOMContentLoaded", () => {
-    showAuthScreen("login");
+    if (!sessionStorage.getItem("shareshelfToken")) {
+        showAuthScreen("login");
+    }
 });
