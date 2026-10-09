@@ -21,3 +21,88 @@ body {
     width: min(1100px, 92%);
     margin: 0 auto;
 }
+
+.item-description {
+    color: var(--muted);
+    font-size: 13px;
+    margin: -10px 0 18px;
+    min-height: 40px;
+}
+
+.app-dialog {
+    width: min(480px, 92%);
+    max-height: 90vh;
+    overflow-y: auto;
+    margin: auto;
+    padding: 28px;
+    border: none;
+    border-radius: 18px;
+    color: var(--dark);
+    background: var(--white);
+}
+
+.app-dialog::backdrop {
+    background: rgb(15 23 42 / 55%);
+}
+
+.dialog-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dialog-heading h2 {
+    margin: 0;
+    font-size: 25px;
+}
+
+.close-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+#listingForm {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#listingForm label {
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 5px;
+}
+
+#listingForm input,
+#listingForm select,
+#listingForm textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--dark);
+    font: inherit;
+}
+
+#listingForm input:focus,
+#listingForm select:focus,
+#listingForm textarea:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+
+.submit-btn {
+    margin-top: 12px;
+    font: inherit;
+}
+
+@media (max-width: 550px) {
+    .app-dialog {
+        padding: 20px;
+    }
+}
+
