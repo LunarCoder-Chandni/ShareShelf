@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { requireAuth } from '../middleware/auth.js';
+import { uploadImage } from '../middleware/upload.js';
+import * as ctrl from '../controllers/upload.controller.js';
+
+const router = Router();
+
+// POST /api/uploads  (multipart/form-data, field "image") -> { data: { url, path } }
+router.post('/', requireAuth, uploadImage, ctrl.upload);
+
+export default router;
