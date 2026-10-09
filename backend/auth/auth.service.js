@@ -1,15 +1,7 @@
-<<<<<<< HEAD:backend/auth.service.js
-import { supabaseAuthClient } from './supabase.js';
-import { env, isAllowedEmail } from './Env.js';
-import { AppError } from './middleware/errorHandler.js';
-import { ensureProfile } from './profile.service.js';
-=======
-import { supabaseAdmin, supabaseAuthClient } from '../config/supabase.js';
+import { supabaseAuthClient } from '../config/supabase.js';
 import { env, isAllowedEmail } from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { unwrap } from '../helpers/helpers.js';
 import { ensureProfile } from '../profile/profile.service.js';
->>>>>>> 341a4bd6a10aad487ea7eac068e78c87d070cc12:backend/auth/auth.service.js
 
 const sessionOut = (s) =>
   s && {

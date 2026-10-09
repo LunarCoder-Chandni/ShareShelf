@@ -1,15 +1,9 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-<<<<<<< HEAD:backend/Auth.routes.js
-import { validate } from './Validate.js';
-import { requireAuth } from './auth.js';
-import * as ctrl from './Auth.controller.js';
-=======
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import * as ctrl from './auth.controller.js';
->>>>>>> 341a4bd6a10aad487ea7eac068e78c87d070cc12:backend/auth/auth.routes.js
 
 const router = Router();
 
