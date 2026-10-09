@@ -33,7 +33,7 @@ const defaultItems = [
         id: 4,
         name: "Cycle",
         category: "Transport",
-        type: "Rent",
+        type: "Service",
         price: "₹50/day",
         icon: "🚲",
         description: "Cycle available for short-term use."
@@ -81,7 +81,7 @@ function renderItems() {
             <section class="hero">
                 <p class="eyebrow">SHARE MORE · WASTE LESS</p>
                 <h1>Your community has<br>everything you need.</h1>
-                <p class="hero-description">Borrow, rent, sell, or discover useful items from people around you.</p>
+                <p class="hero-description">Borrow, Service, sell, or discover useful items from people around you.</p>
                 <a class="primary-btn hero-btn" href="#browse">Explore items</a>
             </section>
 
@@ -121,7 +121,7 @@ function renderItems() {
                 <div class="steps-grid">
                     <article><span>01</span><h3>Discover</h3><p>Find useful items in your community.</p></article>
                     <article><span>02</span><h3>Connect</h3><p>Contact the person listing an item.</p></article>
-                    <article><span>03</span><h3>Share</h3><p>Borrow, rent, or sell items responsibly.</p></article>
+                    <article><span>03</span><h3>Share</h3><p>Borrow, Service, or sell items responsibly.</p></article>
                 </div>
             </section>
         </main>
@@ -147,7 +147,7 @@ function renderItems() {
                 <label for="itemType">Listing type</label>
                 <select id="itemType" name="itemType" required>
                     <option value="Borrow">Borrow</option>
-                    <option value="Rent">Rent</option>
+                    <option value="Service">Service</option>
                     <option value="Sell">Sell</option>
                     <option value="Give away">Give away</option>
                 </select>
