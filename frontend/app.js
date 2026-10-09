@@ -94,12 +94,41 @@ function renderItems() {
 
 
         <main>
-            <section class="hero">
-                <p class="eyebrow">SHARE MORE · WASTE LESS</p>
-                <h1>Your community has<br>everything you need.</h1>
-                <p class="hero-description">Borrow, Service, sell, or discover useful items from people around you.</p>
-                <a class="primary-btn hero-btn" href="#browse">Explore items</a>
-            </section>
+            
+<section class="hero">
+    <div class="hero-content">
+        <p class="eyebrow">✦ SHARE MORE · WASTE LESS</p>
+
+        <h1>
+            Your campus,<br>
+            your community.<br>
+            <span>Share more.</span>
+        </h1>
+
+        <p class="hero-description">
+            Borrow what you need, find pre-loved essentials,
+            and share your skills with students around you.
+            Everything your campus community needs, all in one place.
+        </p>
+
+        <div class="hero-actions">
+            <a class="primary-btn hero-btn" href="#browse">
+                Explore items →
+            </a>
+
+            <a class="secondary-btn hero-btn" href="#how-it-works">
+                How it works
+            </a>
+        </div>
+
+        <div class="hero-trust">
+            <span>📚 Books</span>
+            <span>♻️ Reuse</span>
+            <span>🤝 Community</span>
+        </div>
+    </div>
+</section>
+
 
             <section class="browse-section" id="browse">
                 <div class="section-heading">

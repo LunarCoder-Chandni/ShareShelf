@@ -35,7 +35,16 @@ export async function signUp({ email, password, full_name }) {
 
 export async function logIn({ email, password }) {
   const { data, error } = await supabaseAuthClient.auth.signInWithPassword({ email, password });
-  if (error || !data.session) throw new AppError(401, 'Invalid email or password');
+  if (error || !data.session) {
+    // Supabase rejects unconfirmed accounts separately from bad credentials.
+    // Keep the common credential error generic, but make the actionable
+    // email-confirmation case clear to users.
+    const authMessage = String(error?.message || '').toLowerCase();
+    if (authMessage.includes('email not confirmed')) {
+      throw new AppError(401, 'Please confirm your email address using the link we sent before logging in.');
+    }
+    throw new AppError(401, 'Invalid email or password');
+  }
 
   const profile = await ensureProfile(data.user);
   if (profile.is_blocked) throw new AppError(403, 'Your account has been suspended');

@@ -972,3 +972,139 @@ html[data-theme="dark"] footer {
     transform: scale(1.08);
     background-color: #f0f2f5;
 }
+
+/* ===== ShareShelf Homepage Hero ===== */
+
+.hero {
+    position: relative;
+    overflow: hidden;
+    padding: 90px 7%;
+    border-radius: 0 0 28px 28px;
+    background: linear-gradient(135deg, #eef5ff 0%, #ffffff 55%, #e8f8f5 100%);
+}
+
+.hero-content {
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.hero .eyebrow {
+    display: inline-block;
+    color: #2764c5;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 18px;
+}
+
+.hero h1 {
+    color: #17243b;
+    font-size: clamp(38px, 6vw, 66px);
+    line-height: 1.12;
+    letter-spacing: -2px;
+    margin: 0 0 22px;
+}
+
+.hero h1 span {
+    color: #3978df;
+}
+
+.hero-description {
+    max-width: 590px;
+    margin: 0 auto 30px;
+    color: #5d687b;
+    font-size: 17px;
+    line-height: 1.8;
+}
+
+.hero-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.hero-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 14px 24px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.secondary-btn {
+    border: 1px solid #d6dfed;
+    background: #ffffff;
+    color: #24344d;
+    transition: 0.2s ease;
+}
+
+.secondary-btn:hover {
+    background: #edf3fc;
+    transform: translateY(-2px);
+}
+
+.hero-trust {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin-top: 34px;
+    color: #536176;
+    font-size: 14px;
+}
+
+@media (max-width: 600px) {
+    .hero {
+        padding: 65px 6%;
+    }
+
+    .hero h1 {
+        letter-spacing: -1px;
+    }
+
+    .hero-description {
+        font-size: 15px;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+    }
+
+    .hero-actions .hero-btn {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* Dark theme support */
+body.dark-mode .hero {
+    background: linear-gradient(135deg, #1b2940, #1c2633 60%, #173632);
+}
+
+body.dark-mode .hero h1 {
+    color: #f1f5f9;
+}
+
+body.dark-mode .hero h1 span {
+    color: #8bb5ff;
+}
+
+body.dark-mode .hero-description,
+body.dark-mode .hero-trust {
+    color: #c0cada;
+}
+
+body.dark-mode .hero .eyebrow {
+    color: #9fc2ff;
+}
+
+body.dark-mode .secondary-btn {
+    background: #252f40;
+    border-color: #414d61;
+    color: #f1f5f9;
+}
