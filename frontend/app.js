@@ -67,23 +67,68 @@ function getIcon(category) {
 
 function renderItems() {
     root.innerHTML = `
-        <header class="navbar">
-            <a class="logo" href="#">ShareShelf<span>.</span></a>
-            <nav>
-                <a href="#browse">Browse</a>
-                <a href="#my-listings">My Listings</a>
-                <a href="#how-it-works">How it works</a>
-                <button class="primary-btn" id="addItemBtn">+ List an item</button>
-            </nav>
-        </header>
+        
+<header class="navbar">
+    <a class="logo" href="#">ShareShelf<span>.</span></a>
+
+    <nav>
+        <a href="#browse">Browse</a>
+        <a href="#my-listings">My Listings</a>
+        <a href="#how-it-works">How it works</a>
+
+        <button
+            class="theme-toggle"
+            id="themeToggle"
+            type="button"
+            aria-label="Switch to dark mode"
+            title="Switch theme"
+        >
+            🌙
+        </button>
+
+        <button class="primary-btn" id="addItemBtn">
+            + List an item
+        </button>
+    </nav>
+</header>
+
 
         <main>
-            <section class="hero">
-                <p class="eyebrow">SHARE MORE · WASTE LESS</p>
-                <h1>Your community has<br>everything you need.</h1>
-                <p class="hero-description">Borrow, Service, sell, or discover useful items from people around you.</p>
-                <a class="primary-btn hero-btn" href="#browse">Explore items</a>
-            </section>
+            
+<section class="hero">
+    <div class="hero-content">
+        <p class="eyebrow">✦ SHARE MORE · WASTE LESS</p>
+
+        <h1>
+            Your campus,<br>
+            your community.<br>
+            <span>Share more.</span>
+        </h1>
+
+        <p class="hero-description">
+            Borrow what you need, find pre-loved essentials,
+            and share your skills with students around you.
+            Everything your campus community needs, all in one place.
+        </p>
+
+        <div class="hero-actions">
+            <a class="primary-btn hero-btn" href="#browse">
+                Explore items →
+            </a>
+
+            <a class="secondary-btn hero-btn" href="#how-it-works">
+                How it works
+            </a>
+        </div>
+
+        <div class="hero-trust">
+            <span>📚 Books</span>
+            <span>♻️ Reuse</span>
+            <span>🤝 Community</span>
+        </div>
+    </div>
+</section>
+
 
             <section class="browse-section" id="browse">
                 <div class="section-heading">
@@ -336,3 +381,120 @@ function renderItems() {
 }
 
 renderItems();
+
+/* ===== ShareShelf Theme Toggle ===== */
+
+function initializeThemeToggle() {
+    const themeToggle = document.getElementById("themeToggle");
+
+    if (!themeToggle) return;
+
+    // Restore the previously selected theme
+    const savedTheme = localStorage.getItem("shareshelf-theme");
+
+    if (savedTheme === "dark") {
+        document.body.classList.add("dark-mode");
+    }
+
+    updateThemeButton();
+
+    themeToggle.addEventListener("click", function () {
+        document.body.classList.toggle("dark-mode");
+
+        const isDark = document.body.classList.contains("dark-mode");
+
+        localStorage.setItem(
+            "shareshelf-theme",
+            isDark ? "dark" : "light"
+        );
+
+        updateThemeButton();
+    });
+
+    function updateThemeButton() {
+        const isDark = document.body.classList.contains("dark-mode");
+
+        themeToggle.textContent = isDark ? "☀️" : "🌙";
+
+        themeToggle.setAttribute(
+            "aria-label",
+            isDark ? "Switch to light mode" : "Switch to dark mode"
+        );
+
+        themeToggle.setAttribute(
+            "title",
+            isDark ? "Switch to light mode" : "Switch to dark mode"
+        );
+    }
+}
+
+// Run after the page's HTML is available
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeThemeToggle
+    );
+} else {
+    initializeThemeToggle();
+}
+
+/* ===== ShareShelf Theme Toggle Functionality ===== */
+
+function initializeThemeToggle() {
+    const themeToggle = document.getElementById("themeToggle");
+
+    if (!themeToggle) {
+        console.error("Theme toggle button not found.");
+        return;
+    }
+
+    // Prevent duplicate event listeners
+    if (themeToggle.dataset.initialized === "true") {
+        return;
+    }
+
+    themeToggle.dataset.initialized = "true";
+
+    // Restore the saved theme
+    const savedTheme = localStorage.getItem("shareshelf-theme");
+
+    if (savedTheme === "dark") {
+        document.body.classList.add("dark-mode");
+    }
+
+    updateButton();
+
+    themeToggle.addEventListener("click", function () {
+        document.body.classList.toggle("dark-mode");
+
+        const isDark = document.body.classList.contains("dark-mode");
+
+        localStorage.setItem(
+            "shareshelf-theme",
+            isDark ? "dark" : "light"
+        );
+
+        updateButton();
+    });
+
+    function updateButton() {
+        const isDark = document.body.classList.contains("dark-mode");
+
+        themeToggle.textContent = isDark ? "☀️" : "🌙";
+
+        themeToggle.setAttribute(
+            "aria-label",
+            isDark ? "Switch to light mode" : "Switch to dark mode"
+        );
+
+        themeToggle.title = isDark
+            ? "Switch to light mode"
+            : "Switch to dark mode";
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeThemeToggle);
+} else {
+    initializeThemeToggle();
+}

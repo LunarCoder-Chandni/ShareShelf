@@ -59,6 +59,16 @@ export async function logIn({ email, password }) {
 
   if (error) {
     console.error('Supabase login error:', error.message);
+
+    const authMessage = String(error.message || '').toLowerCase();
+
+    if (authMessage.includes('email not confirmed')) {
+      throw new AppError(
+        401,
+        'Please confirm your email address before logging in.'
+      );
+    }
+
     throw new AppError(401, 'Invalid email or password');
   }
 
@@ -67,21 +77,16 @@ export async function logIn({ email, password }) {
     throw new AppError(401, 'Invalid email or password');
   }
 
-  try {
-    const profile = await ensureProfile(data.user);
+  const profile = await ensureProfile(data.user);
 
-    if (profile.is_blocked) {
-      throw new AppError(403, 'Your account has been suspended');
-    }
-
-    return {
-      user: profile,
-      session: sessionOut(data.session),
-    };
-  } catch (error) {
-    console.error('ShareShelf profile/login error:', error.message);
-    throw error;
+  if (profile.is_blocked) {
+    throw new AppError(403, 'Your account has been suspended');
   }
+
+  return {
+    user: profile,
+    session: sessionOut(data.session),
+  };
 }
 
 export async function refresh(refresh_token) {
