@@ -1,0 +1,23 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+}
+
+:root {
+    --primary: #2563eb;
+    --background: #f8fafc;
+    --text: #1e293b;
+}
+
+.container {
+    width: min(1100px, 92%);
+    margin: 0 auto;
+}
