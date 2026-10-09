@@ -948,3 +948,27 @@ html[data-theme="dark"] footer {
         font-size: 12px;
     }
 }
+
+/* ===== ShareShelf Theme Toggle Button ===== */
+
+.theme-toggle {
+    width: 42px;
+    height: 42px;
+    border: 1px solid #dce1e8;
+    border-radius: 50%;
+    background-color: #ffffff;
+    color: #222222;
+    cursor: pointer;
+    font-size: 20px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: all 0.25s ease;
+}
+
+.theme-toggle:hover {
+    transform: scale(1.08);
+    background-color: #f0f2f5;
+}
