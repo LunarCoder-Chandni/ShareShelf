@@ -1108,3 +1108,458 @@ body.dark-mode .secondary-btn {
     border-color: #414d61;
     color: #f1f5f9;
 }
+
+/* ===== Professional ShareShelf item cards ===== */
+
+.item-card {
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-color, #e7e9ee);
+    border-radius: 18px;
+    background: var(--card-bg, #ffffff);
+    box-shadow: 0 4px 14px rgba(20, 30, 50, 0.05);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 28px rgba(20, 30, 50, 0.11);
+}
+
+.item-image-wrap {
+    position: relative;
+    width: 100%;
+    height: 190px;
+    overflow: hidden;
+    background: var(--surface-bg, #f1f4f8);
+}
+
+.item-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.item-card:hover .item-image {
+    transform: scale(1.04);
+}
+
+.item-image-placeholder {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    font-size: 52px;
+}
+
+.item-image-placeholder span {
+    display: flex;
+    width: 90px;
+    height: 90px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.item-category-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    padding: 6px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #344054;
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.item-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+}
+
+.item-card-heading h3 {
+    margin: 0;
+    color: var(--text-color, #202938);
+    font-size: 18px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.item-description {
+    display: -webkit-box;
+    min-height: 42px;
+    margin: 0;
+    overflow: hidden;
+    color: var(--muted-text, #687386);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color, #e7e9ee);
+}
+
+.item-type {
+    color: var(--muted-text, #687386);
+    font-size: 13px;
+}
+
+.item-price {
+    color: var(--accent-color, #287a55);
+    font-size: 15px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.item-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.item-card-actions .primary-btn,
+.item-card-actions .remove-btn {
+    flex: 1;
+}
+
+.item-card-actions .text-btn {
+    padding: 10px 0;
+    font-weight: 600;
+}
+
+@media (max-width: 480px) {
+    .item-image-wrap {
+        height: 165px;
+    }
+
+    .item-card-content {
+        padding: 14px;
+    }
+
+    .item-card-heading h3 {
+        font-size: 16px;
+    }
+}
+
+/* ===== ShareShelf: Complete site theme ===== */
+
+:root {
+    color-scheme: light;
+
+    --page-bg: #f7f8fc;
+    --card-bg: #ffffff;
+    --surface-bg: #eef2f7;
+    --text-color: #202938;
+    --muted-text: #687386;
+    --border-color: #e2e7ef;
+    --accent-color: #287a55;
+    --accent-hover: #206444;
+    --input-bg: #ffffff;
+    --nav-bg: rgba(255, 255, 255, 0.94);
+    --shadow-color: rgba(25, 35, 55, 0.08);
+    --badge-bg: #edf7f0;
+    --badge-text: #246b45;
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+
+    --page-bg: #11151d;
+    --card-bg: #1b2230;
+    --surface-bg: #252e3d;
+    --text-color: #edf2f8;
+    --muted-text: #a7b2c3;
+    --border-color: #343f50;
+    --accent-color: #65d49a;
+    --accent-hover: #83e5ae;
+    --input-bg: #202938;
+    --nav-bg: rgba(20, 26, 37, 0.96);
+    --shadow-color: rgba(0, 0, 0, 0.22);
+    --badge-bg: #263e34;
+    --badge-text: #a5efc1;
+}
+
+html,
+body {
+    background-color: var(--page-bg);
+    color: var(--text-color);
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+body,
+main,
+section,
+header,
+footer,
+nav,
+article,
+aside,
+form,
+fieldset,
+dialog {
+    color: var(--text-color);
+}
+
+body {
+    background: var(--page-bg);
+}
+
+/* Navigation */
+.navbar,
+header.navbar {
+    background: var(--nav-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Main sections and cards */
+.hero,
+.browse-section,
+section,
+.item-card,
+.card,
+.modal-content,
+.modal,
+form,
+.listing-form,
+.empty-state {
+    color: var(--text-color);
+}
+
+.item-card,
+.card,
+.modal-content,
+.modal,
+.listing-form,
+form {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    box-shadow: 0 5px 20px var(--shadow-color);
+}
+
+/* Text */
+h1,
+h2,
+h3,
+h4,
+p,
+label,
+.item-description,
+.category,
+.section-heading {
+    color: var(--text-color);
+}
+
+.hero-description,
+.item-type,
+.muted,
+small,
+.empty-message {
+    color: var(--muted-text);
+}
+
+/* Inputs and dropdowns */
+input,
+textarea,
+select {
+    color: var(--text-color);
+    background-color: var(--input-bg);
+    border-color: var(--border-color);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--muted-text);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+/* Item cards */
+.item-image-wrap {
+    background: var(--surface-bg);
+}
+
+.item-card-content {
+    background: var(--card-bg);
+}
+
+.item-card-heading h3 {
+    color: var(--text-color);
+}
+
+.item-description {
+    color: var(--muted-text);
+}
+
+.item-meta {
+    border-color: var(--border-color);
+}
+
+.item-price {
+    color: var(--accent-color);
+}
+
+.item-category-badge {
+    background: var(--badge-bg);
+    color: var(--badge-text);
+    border-color: var(--border-color);
+}
+
+/* Buttons */
+.primary-btn {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.primary-btn:hover {
+    background-color: var(--accent-hover);
+}
+
+.text-btn,
+.secondary-btn,
+.remove-btn,
+.theme-toggle {
+    border-color: var(--border-color);
+}
+
+.secondary-btn,
+.theme-toggle {
+    color: var(--text-color);
+    background: var(--card-bg);
+}
+
+/* Dropdowns, menus, and dialogs */
+.dropdown-menu,
+.dropdown-content,
+.popover,
+dialog {
+    background: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+/* Smooth theme transition */
+body *,
+body *::before,
+body *::after {
+    transition-property: background-color, color, border-color, box-shadow;
+    transition-duration: 0.2s;
+    transition-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body *,
+    body *::before,
+    body *::after {
+        transition: none !important;
+    }
+}
+
+/* ===== ShareShelf complete dark theme ===== */
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    background: #11151d;
+    color: #edf2f8;
+}
+
+html[data-theme="dark"] body {
+    background: #11151d;
+    color: #edf2f8;
+}
+
+html[data-theme="dark"] .navbar,
+html[data-theme="dark"] main,
+html[data-theme="dark"] .hero,
+html[data-theme="dark"] .browse-section,
+html[data-theme="dark"] .my-listings-section,
+html[data-theme="dark"] .how-section,
+html[data-theme="dark"] footer {
+    background-color: #11151d;
+    color: #edf2f8;
+}
+
+html[data-theme="dark"] .item-card,
+html[data-theme="dark"] .app-dialog,
+html[data-theme="dark"] .app-dialog form,
+html[data-theme="dark"] .steps-grid article {
+    background-color: #1b2230;
+    color: #edf2f8;
+    border-color: #343f50;
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] p,
+html[data-theme="dark"] label,
+html[data-theme="dark"] .logo,
+html[data-theme="dark"] nav a {
+    color: #edf2f8;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+    background-color: #202938;
+    color: #edf2f8;
+    border-color: #414d60;
+}
+
+html[data-theme="dark"] .secondary-btn,
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .close-btn {
+    background-color: #252e3d;
+    color: #edf2f8;
+    border-color: #414d60;
+}
+
+html[data-theme="dark"] .item-description,
+html[data-theme="dark"] .hero-description,
+html[data-theme="dark"] .section-description,
+html[data-theme="dark"] .item-type {
+    color: #a7b2c3;
+}
+
+html[data-theme="dark"] .item-meta {
+    border-color: #343f50;
+}
+
+html[data-theme="dark"] .item-category-badge {
+    background-color: #263e34;
+    color: #a5efc1;
+}
+
+html[data-theme="dark"] .item-image-wrap {
+    background-color: #252e3d;
+}
+
+html[data-theme="dark"] .item-image-placeholder span {
+    background-color: #303b4c;
+}
