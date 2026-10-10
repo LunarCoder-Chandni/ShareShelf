@@ -194,6 +194,73 @@ Divyanka — GitHub
 
 Just replace YOUR-GITHUB-USERNAME with Divyanka's actual GitHub username. If you send me her GitHub profile link, I'll put the correct link in for you! 💙
 
+npm error code ENOENT
+npm error syscall open
+npm error path D:\VS Code\Projects\shareshelf\package.json
+npm error errno -4058
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'D:\VS Code\Projects\shareshelf\package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: C:\Users\CHANDNI\AppData\Local\npm-cache\_logs\2026-10-10T00_26_28_443Z-debug-0.log
+PS D:\VS Code\Projects\shareshelf> npm.cmd run dev
+npm error code ENOENT
+npm error syscall open
+npm error path D:\VS Code\Projects\shareshelf\package.json
+npm error errno -4058
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'D:\VS Code\Projects\shareshelf\package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: C:\Users\CHANDNI\AppData\Local\npm-cache\_logs\2026-10-10T00_26_39_425Z-debug-0.log
+PS D:\VS Code\Projects\shareshelf>
+…
+BROO Chandni 😭 don't worry, this is an easy fix! Your error means there is no package.json in the root folder of ShareShelf. So npm run dev cannot find which command to execute.
+
+From our earlier setup, ShareShelf has a separate frontend and backend, so you probably need to start them separately.
+
+Step 1: Check your project folders
+You're already in the correct root folder:
+
+D:\VS Code\Projects\shareshelf
+
+Run this command in your current PowerShell terminal:
+
+Get-ChildItem
+
+Look for folders named frontend and backend.
+
+Step 2: Start the frontend
+If your project contains a frontend folder, run:
+
+cd frontend
+npm run dev
+
+If that gives an error, check whether the frontend has a package.json:
+
+Get-ChildItem package.json
+
+If the file exists but dev isn't a defined script, we'll use the correct command for your setup.
+
+Step 3: Start the backend separately
+Open a second terminal in VS Code and run:
+
+cd "D:\VS Code\Projects\shareshelf\backend"
+npm run dev
+
+If the backend doesn't have a dev script, try:
+
+npm start
+
+Use whichever command is actually defined in backend/package.json.
+
+Important: Don't create a new package.json in the root just to silence this error. Your project may already have separate configurations for its frontend and backend.
+
+Send me this output
+Run the following from your current root folder and paste the result:
+
+Get-ChildItem
+
+I'll tell you the exact commands to run for your ShareShelf structure, without messing up your working code. 💙
+
 ShareShelf
 ShareShelf is a student-focused sharing platform that helps campus
 communities make better use of resources by borrowing, lending, buying,
@@ -410,6 +477,6 @@ No license is specified here. Add a LICENSE file if you intend to
 grant others explicit permission to reuse, modify, or distribute the
 project.
 
-Collaborators
-Sneha- https://github.com/nova-sneha
-Divyanka- https://github.com/divyankapandey13-max
+
+
+⋮⋮⋮⋮⋮⋮⋮⋮⋮⋮⋮⋮
