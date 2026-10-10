@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { validate } from '../middleware/validate.js';
-import { requireAuth } from '../middleware/auth.js';
-import * as ctrl from '../controllers/auth.controller.js';
+import { validate } from './Validate.js';
+import { requireAuth } from './auth.js';
+import * as ctrl from './Auth.controller.js';
 
 const router = Router();
 
@@ -19,8 +19,8 @@ const signupSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   password: z.string().min(8, 'Password must be at least 8 characters').max(72),
   full_name: z.string().trim().min(2).max(80),
-  college: z.string().trim().max(120).optional(),
-  phone: z.string().trim().regex(/^[0-9+\-\s]{7,15}$/, 'Invalid phone number').optional(),
+  department: z.string().trim().max(120).optional(),
+  year_of_study: z.number().int().min(1).max(8).optional(),
 });
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),

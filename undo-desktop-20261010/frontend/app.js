@@ -7,30 +7,10 @@ let categories = [];
 let listings = [];
 let requests = [];
 let transactions = [];
-let profile = null;
 let refreshPromise = null;
 let listingsPage = 1;
 let hasMoreListings = false;
 let listingsRequestId = 0;
-let currentListingType = 'borrow';
-
-const ICONS = {
-    shelf: '<path d="M3 7h18v13H3zM3 11h18M8 7V4h8v3M8 11v9m8-9v9"/>',
-    home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
-    borrow: '<path d="M7 7h10l-3-3m3 3-3 3M17 17H7l3 3m-3-3 3-3"/>',
-    service: '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Zm6 11 .9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9L18 14Z"/>',
-    sell: '<path d="M20 13 13 20H5a2 2 0 0 1-2-2v-8l7-7h8a2 2 0 0 1 2 2zM7.5 7.5h.01"/><circle cx="15" cy="8" r="1.2"/>',
-    history: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M4 4v4h4"/>',
-    user: '<circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>',
-    search: '<circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4.5 4.5"/>',
-    filter: '<path d="M4 6h16M7 12h10m-7 6h4"/><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/>',
-    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
-    moon: '<path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z"/>',
-};
-
-function icon(name, size = 18) {
-    return `<svg class="ui-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
-}
 
 function readSession() {
     try {
@@ -98,49 +78,30 @@ async function api(path, options = {}, retry = true) {
 function renderShell() {
     root.innerHTML = `
         <header class="navbar">
-            <a class="logo" href="#dashboard" data-view="dashboard">${icon('shelf', 24)}<span class="logo-word">ShareShelf<span class="logo-period">.</span></span></a>
-            <nav class="app-nav" aria-label="Main navigation">
-                <button class="nav-link active" data-view="dashboard" type="button">${icon('home')}<span>Home</span></button>
-                <button class="nav-link" data-view="borrow" type="button">${icon('borrow')}<span>Borrow</span></button>
-                <button class="nav-link" data-view="service" type="button">${icon('service')}<span>Services</span></button>
-                <button class="nav-link" data-view="sell" type="button">${icon('sell')}<span>Sell</span></button>
-                <button class="nav-link" data-view="activity" type="button">${icon('history')}<span>History</span></button>
-                <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false"><span id="themeToggleIcon" aria-hidden="true"></span><span id="themeToggleLabel">Dark mode</span></button>
+            <a class="logo" href="#">ShareShelf<span>.</span></a>
+            <nav aria-label="Main navigation">
+                <a href="#browse">Browse</a>
+                <a href="#how-it-works">How it works</a>
                 <span id="authControls"></span>
             </nav>
         </header>
         <main>
-            <section id="dashboardSection" class="dashboard-section app-view">
-                <div class="dashboard-welcome">
-                    <div><p class="eyebrow">YOUR CAMPUS, SHARED</p><h1 id="welcomeTitle">Welcome to ShareShelf</h1>
-                    <p class="hero-description">Borrow what you need, find a helpful service, or pass something on.</p></div>
-                    <div class="dashboard-avatar" aria-hidden="true" id="studentAvatar">${icon('user', 28)}</div>
-                </div>
-                <div class="dashboard-overview">
-                    <article class="student-card">
-                        <p class="eyebrow"><span class="eyebrow-icon">${icon('user', 15)}</span>STUDENT PROFILE</p><h2 id="studentName">Sign in to see your profile</h2>
-                        <p id="studentEmail" class="student-email">Your college account details will appear here.</p>
-                        <div class="student-meta"><span id="studentDepartment">Department not set</span><span id="studentYear">Year not set</span></div>
-                    </article>
-                    <article class="history-card">
-                        <div class="history-card-heading"><div><p class="eyebrow"><span class="eyebrow-icon">${icon('history', 15)}</span>RECENT ACTIVITY</p><h2>Your history</h2></div><button class="text-btn" data-view="activity" type="button">View all <span aria-hidden="true">→</span></button></div>
-                        <div id="recentActivity" class="recent-activity"><p class="muted-copy">Log in to see your requests and transactions.</p></div>
-                    </article>
-                </div>
-                <div class="dashboard-options-heading"><div><p class="eyebrow">GET STARTED</p><h2>What would you like to do?</h2></div></div>
-                <div class="dashboard-options">
-                    <button class="option-card borrow-option" data-view="borrow" type="button"><span class="option-icon">${icon('borrow', 25)}</span><span class="option-title">Borrow</span><span class="option-copy">Find items you can borrow from students nearby.</span><span class="option-arrow">Explore borrow listings <span aria-hidden="true">→</span></span></button>
-                    <button class="option-card service-option" data-view="service" type="button"><span class="option-icon">${icon('service', 25)}</span><span class="option-title">Services</span><span class="option-copy">Get help or share a skill with your campus.</span><span class="option-arrow">Explore services <span aria-hidden="true">→</span></span></button>
-                    <button class="option-card sell-option" data-view="sell" type="button"><span class="option-icon">${icon('sell', 25)}</span><span class="option-title">Sell</span><span class="option-copy">Find useful pre-loved items or list your own.</span><span class="option-arrow">Explore items for sale <span aria-hidden="true">→</span></span></button>
-                </div>
+            <section class="hero">
+                <p class="eyebrow">SHARE MORE · WASTE LESS</p>
+                <h1>Your community has<br>everything you need.</h1>
+                <p class="hero-description">Borrow, offer a service, or find useful items from your college community.</p>
+                <a class="primary-btn hero-btn" href="#browse">Explore items</a>
             </section>
-            <section class="browse-section app-view" id="browseSection" hidden>
+            <section class="browse-section" id="browse">
                 <div class="section-heading">
-                    <div><p class="eyebrow">COMMUNITY MARKETPLACE</p><h2 id="browseTitle">Discover items</h2></div>
+                    <div><p class="eyebrow">COMMUNITY MARKETPLACE</p><h2>Discover items</h2></div>
                     <div class="browse-controls">
-                        <label class="search-field">${icon('search', 18)}<input id="searchInput" type="search" list="searchSuggestions" placeholder="Search items..." aria-label="Search items"></label>
-                        <datalist id="searchSuggestions"></datalist>
-                        <label class="category-field">${icon('filter', 18)}<select id="categoryFilter" aria-label="Filter by category"><option value="">All categories</option></select></label>
+                        <input id="searchInput" type="search" placeholder="Search items..." aria-label="Search items">
+                        <select id="typeFilter" aria-label="Filter by listing type">
+                            <option value="">All types</option><option value="borrow">Borrow</option>
+                            <option value="service">Services</option><option value="sale">For sale</option>
+                        </select>
+                        <select id="categoryFilter" aria-label="Filter by category"><option value="">All categories</option></select>
                     </div>
                 </div>
                 <p id="statusMessage" class="status-message" role="status"></p>
@@ -148,13 +109,21 @@ function renderShell() {
                 <p id="emptyMessage" hidden>No matching items found.</p>
                 <button id="loadMoreButton" class="text-btn load-more" type="button" hidden>Load more</button>
             </section>
-            <section id="activitySection" class="activity-section app-view" hidden>
+            <section id="activitySection" class="activity-section" hidden>
                 <p class="eyebrow">YOUR SHARE SHELF</p><h2>Requests and transactions</h2>
                 <p id="activityMessage" class="status-message" role="status"></p>
                 <div id="activityGrid" class="activity-grid"></div>
             </section>
+            <section class="how-section" id="how-it-works">
+                <p class="eyebrow">SIMPLE AND SUSTAINABLE</p><h2>Good things are better shared.</h2>
+                <div class="steps-grid">
+                    <article><span>01</span><h3>Discover</h3><p>Find useful items in your college community.</p></article>
+                    <article><span>02</span><h3>Connect</h3><p>Send a request to the person listing an item.</p></article>
+                    <article><span>03</span><h3>Share</h3><p>Borrow, hire, or sell responsibly.</p></article>
+                </div>
+            </section>
         </main>
-        <footer>Share more, waste less.</footer>
+        <footer>© 2026 ShareShelf · Share more, waste less.</footer>
 
         <dialog id="authDialog" class="app-dialog">
             <form id="authForm">
@@ -190,20 +159,15 @@ function renderShell() {
         </dialog>`;
 
     bindShellEvents();
-    applyTheme(readTheme());
     renderAuthState();
     updateTypeFields();
 }
 
 function bindShellEvents() {
-    document.querySelectorAll('[data-view]').forEach(button => {
-        button.addEventListener('click', () => setActiveView(button.dataset.view));
-    });
     document.querySelectorAll('[data-close]').forEach(button => {
         button.addEventListener('click', () => document.getElementById(button.dataset.close).close());
     });
     document.getElementById('authToggle').addEventListener('click', () => setAuthMode(authMode === 'login' ? 'signup' : 'login'));
-    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
     document.getElementById('authForm').addEventListener('submit', submitAuth);
     document.getElementById('authControls').addEventListener('click', event => {
         if (event.target.id === 'loginButton') {
@@ -216,87 +180,18 @@ function bindShellEvents() {
         }
         if (event.target.id === 'logoutButton') {
             clearSessionData();
-            loadMarketplace();
+            setStatus('You have logged out. Log in to browse your college listings.');
         }
         if (event.target.id === 'addItemButton') openListingDialog();
     });
     document.getElementById('searchInput').addEventListener('input', () => loadListings(true));
+    document.getElementById('typeFilter').addEventListener('change', () => loadListings(true));
     document.getElementById('categoryFilter').addEventListener('change', () => loadListings(true));
     document.getElementById('loadMoreButton').addEventListener('click', () => loadListings(false));
     document.getElementById('itemType').addEventListener('change', updateTypeFields);
     document.getElementById('listingForm').addEventListener('submit', submitListing);
     document.getElementById('itemGrid').addEventListener('click', handleListingAction);
     document.getElementById('activityGrid').addEventListener('click', handleActivityAction);
-}
-
-function readTheme() {
-    try {
-        const saved = localStorage.getItem('shareshelfTheme');
-        if (saved === 'light' || saved === 'dark') return saved;
-    } catch { /* Use the system preference when storage is unavailable. */ }
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function applyTheme(theme) {
-    document.documentElement.dataset.theme = theme;
-    const themeColor = document.querySelector('meta[name="theme-color"]');
-    if (themeColor) themeColor.content = theme === 'dark' ? '#191f1c' : '#f2f0e9';
-    const toggle = document.getElementById('themeToggle');
-    if (!toggle) return;
-    toggle.setAttribute('aria-pressed', String(theme === 'dark'));
-    document.getElementById('themeToggleIcon').innerHTML = icon(theme === 'dark' ? 'sun' : 'moon', 17);
-    document.getElementById('themeToggleLabel').textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
-}
-
-function toggleTheme() {
-    const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('shareshelfTheme', nextTheme); } catch { /* Theme still changes for this session. */ }
-    applyTheme(nextTheme);
-}
-
-function setActiveView(view) {
-    const section = view === 'dashboard' ? 'dashboardSection' : view === 'activity' ? 'activitySection' : 'browseSection';
-    document.querySelectorAll('.app-view').forEach(element => { element.hidden = element.id !== section; });
-    document.querySelectorAll('.app-nav [data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === view));
-    if (section === 'browseSection') {
-        const type = view === 'borrow' ? 'borrow' : view === 'service' ? 'service' : 'sale';
-        currentListingType = type;
-        document.getElementById('browseTitle').textContent = `${type === 'sale' ? 'Items for sale' : type === 'service' ? 'Campus services' : 'Items to borrow'}`;
-        fillCategoryFilters();
-        loadListings(true);
-    }
-    if (section === 'activitySection') renderActivity();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function renderDashboard() {
-    const user = session?.user;
-    const meta = user?.user_metadata || {};
-    const name = profile?.full_name || meta.full_name || (user?.email ? user.email.split('@')[0] : null);
-    document.getElementById('welcomeTitle').textContent = name ? `Welcome back, ${name.split(' ')[0]}` : 'Welcome to ShareShelf';
-    document.getElementById('studentName').textContent = name || 'Sign in to see your profile';
-    document.getElementById('studentEmail').textContent = user?.email || 'Your college account details will appear here.';
-    document.getElementById('studentDepartment').textContent = profile?.department || meta.department || 'Department not set';
-    const year = profile?.year_of_study || meta.year_of_study;
-    document.getElementById('studentYear').textContent = year ? `Year ${year}` : 'Year not set';
-    document.getElementById('studentAvatar').innerHTML = name
-        ? escapeHTML(name.trim().charAt(0).toUpperCase())
-        : icon('user', 28);
-    renderRecentActivity();
-}
-
-function renderRecentActivity() {
-    const target = document.getElementById('recentActivity');
-    if (!target) return;
-    if (!session?.access_token) {
-        target.innerHTML = '<p class="muted-copy">Log in to see your requests and transactions.</p>';
-        return;
-    }
-    const recent = [
-        ...requests.map(item => ({ type: 'Request', title: item.listing?.title || 'Listing request', status: item.status, date: item.updated_at || item.created_at })),
-        ...transactions.map(item => ({ type: 'Transaction', title: requests.find(request => request.id === item.request_id)?.listing?.title || 'Accepted request', status: item.status, date: item.updated_at || item.created_at }))
-    ].sort((left, right) => Date.parse(right.date || 0) - Date.parse(left.date || 0)).slice(0, 3);
-    target.innerHTML = recent.length ? recent.map(item => `<div class="recent-row"><span class="recent-dot"></span><span><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.type)} · ${escapeHTML(item.status)}</small></span></div>`).join('') : '<p class="muted-copy">Your requests and transactions will appear here.</p>';
 }
 
 function clearSessionData() {
@@ -306,13 +201,11 @@ function clearSessionData() {
     categories = [];
     requests = [];
     transactions = [];
-    profile = null;
     hasMoreListings = false;
     fillCategoryFilters();
     renderListings();
     renderAuthState();
     renderActivity();
-    renderDashboard();
 }
 
 let authMode = 'login';
@@ -367,34 +260,34 @@ function renderAuthState() {
     const controls = document.getElementById('authControls');
     if (!controls) return;
     controls.innerHTML = session?.access_token
-        ? '<button class="primary-btn" id="addItemButton" type="button">+ List an item</button><button class="text-btn" id="logoutButton" type="button">Log out</button>'
+        ? '<a id="activityLink" href="#activitySection">My activity</a><button class="primary-btn" id="addItemButton" type="button">+ List an item</button><button class="text-btn" id="logoutButton" type="button">Log out</button>'
         : '<button class="primary-btn" id="loginButton" type="button">Log in</button><button class="text-btn" id="signupButton" type="button">Sign up</button>';
 }
 
 async function loadMarketplace() {
-    const hadSession = Boolean(session?.access_token);
+    if (!session?.access_token) {
+        categories = [];
+        listings = [];
+        requests = [];
+        transactions = [];
+        hasMoreListings = false;
+        fillCategoryFilters();
+        renderListings();
+        renderActivity();
+        setStatus('Log in with your college email to browse and list items.');
+        return false;
+    }
     setStatus('Loading marketplace…');
     try {
-        const categoryResult = await api('/categories');
+        const [categoryResult] = await Promise.all([api('/categories')]);
         categories = categoryResult.data || [];
-        if (session?.access_token) {
-            const profileResult = await api('/profiles/me');
-            profile = profileResult.data || null;
-        } else {
-            profile = null;
-            requests = [];
-            transactions = [];
-            hasMoreListings = false;
-        }
-        renderDashboard();
         fillCategoryFilters();
         if (!await loadListings()) return false;
-        if (session?.access_token && !await loadActivity()) return false;
-        setStatus(session?.access_token ? '' : 'Browsing as guest. Log in to request or list items.');
+        if (!await loadActivity()) return false;
+        setStatus('');
         return true;
     } catch (err) {
-        if (hadSession && !session?.access_token) return loadMarketplace();
-        if (!session) setStatus(err.message, true);
+        if (!session) setStatus('Your session expired. Log in again to continue.');
         else setStatus(err.message, true);
         return false;
     }
@@ -403,39 +296,26 @@ async function loadMarketplace() {
 function fillCategoryFilters() {
     const filter = document.getElementById('categoryFilter');
     const selected = filter.value;
-    const currentCategories = categories.filter(category => category.listing_type === currentListingType);
     filter.innerHTML = '<option value="">All categories</option>' + categories
-        .filter(category => category.listing_type === currentListingType)
         .map(category => `<option value="${escapeHTML(category.slug)}">${escapeHTML(category.name)}</option>`).join('');
-    if (currentCategories.some(category => category.slug === selected)) filter.value = selected;
-    const suggestions = {
-        borrow: ['Calculator', 'Scientific calculator', 'Lab coat', 'Sheet holder', 'Drawing board', 'Canvas', 'Drafter', 'Textbook'],
-        service: ['PPT making', 'Presentation design', 'Animation', 'VFX', 'Video editing', 'Canva design', 'Tutoring', 'Coding help'],
-        sale: ['Calculator', 'Lab coat', 'Sheet holder', 'Drawing board', 'Canvas', 'Drafter', 'Textbooks', 'Stationery', 'Art supplies'],
-    }[currentListingType];
-    document.getElementById('searchInput').placeholder = currentListingType === 'service'
-        ? 'Search PPT, animation, VFX...'
-        : 'Search calculators, lab coats, drafter...';
-    document.getElementById('searchSuggestions').innerHTML = [...new Set([
-        ...suggestions,
-        ...currentCategories.map(category => category.name),
-    ])].map(value => `<option value="${escapeHTML(value)}"></option>`).join('');
+    if (categories.some(category => category.slug === selected)) filter.value = selected;
 }
 
 async function loadListings(reset = true) {
+    if (!session?.access_token) return false;
     if (reset) listingsPage = 1;
     const requestId = ++listingsRequestId;
     const moreButton = document.getElementById('loadMoreButton');
     if (moreButton) moreButton.disabled = true;
     const query = new URLSearchParams({ page: String(listingsPage), limit: '50' });
     const search = document.getElementById('searchInput').value.trim();
+    const type = document.getElementById('typeFilter').value;
     const category = document.getElementById('categoryFilter').value;
     if (search) query.set('search', search);
-    query.set('listing_type', currentListingType);
+    if (type) query.set('listing_type', type);
     if (category) query.set('category_slug', category);
-    const endpoint = session?.access_token ? '/listings' : '/listings/public';
     try {
-        const result = await api(`${endpoint}?${query}`);
+        const result = await api(`/listings?${query}`);
         if (requestId !== listingsRequestId) return false;
         const pageListings = result.data || [];
         listings = reset ? pageListings : listings.concat(pageListings);
@@ -444,7 +324,6 @@ async function loadListings(reset = true) {
         renderListings();
         return true;
     } catch (err) {
-        if (endpoint === '/listings' && !session?.access_token) return loadListings(reset);
         if (requestId === listingsRequestId) setStatus(err.message, true);
         return false;
     } finally {
@@ -464,18 +343,18 @@ function renderListings() {
     const grid = document.getElementById('itemGrid');
     if (!grid) return;
     grid.innerHTML = listings.map(item => {
-        const ownListing = session?.access_token && item.owner_id === currentUserId();
-        const itemIcon = item.listing_type === 'borrow' ? 'borrow' : item.listing_type === 'service' ? 'service' : 'sell';
+        const ownListing = item.owner_id === currentUserId();
+        const icon = item.listing_type === 'borrow' ? '↔' : item.listing_type === 'service' ? '✦' : '₹';
         return `<article class="item-card">
-            <div class="item-icon item-icon-${escapeHTML(item.listing_type)}">${icon(itemIcon, 23)}</div>
+            <div class="item-icon" aria-hidden="true">${icon}</div>
             <p class="category">${escapeHTML(item.category_name || '')} · ${escapeHTML(typeLabel(item.listing_type))}</p>
             <h3>${escapeHTML(item.title)}</h3>
             <p class="item-description">${escapeHTML(item.description || 'No description provided.')}</p>
-            <div class="item-footer"><span>${escapeHTML(priceLabel(item))}</span>${ownListing ? '<span class="owner-label">Your listing</span>' : `<button class="text-btn" data-request-id="${escapeHTML(item.id)}" type="button">${session?.access_token ? 'Request' : 'Log in to request'}</button>`}</div>
+            <div class="item-footer"><span>${escapeHTML(priceLabel(item))}</span>${ownListing ? '<span class="owner-label">Your listing</span>' : `<button class="text-btn" data-request-id="${escapeHTML(item.id)}" type="button">Request</button>`}</div>
             <p class="owner-name">Listed by ${escapeHTML(item.owner_name || 'Student')}</p>
         </article>`;
     }).join('');
-    document.getElementById('emptyMessage').hidden = listings.length > 0;
+    document.getElementById('emptyMessage').hidden = listings.length > 0 || !session?.access_token;
     const moreButton = document.getElementById('loadMoreButton');
     if (moreButton) moreButton.hidden = !hasMoreListings;
 }
@@ -561,11 +440,6 @@ async function submitListing(event) {
 async function handleListingAction(event) {
     const button = event.target.closest('[data-request-id]');
     if (!button) return;
-    if (!session?.access_token) {
-        setAuthMode('login');
-        document.getElementById('authDialog').showModal();
-        return;
-    }
     const item = listings.find(listing => listing.id === button.dataset.requestId);
     if (!item) return;
     const message = window.prompt(`Send a request for “${item.title}”? Add a short message (optional):`, '');
@@ -660,7 +534,6 @@ function renderActivity() {
         </article>`;
     });
     grid.innerHTML = [...requestCards, ...transactionCards].join('');
-    renderRecentActivity();
 }
 
 async function handleActivityAction(event) {
@@ -701,5 +574,4 @@ function escapeHTML(value) {
 }
 
 renderShell();
-renderDashboard();
 loadMarketplace();

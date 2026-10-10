@@ -106,30 +106,12 @@ create table public.listing_images (
   created_at    timestamptz not null default now()
 );
 
--- Reviewers / admins who handle verifications and reports
+-- Reviewers / admins who handle reports
 create table public.team_members (
   user_id     uuid primary key references public.profiles(id) on delete cascade,
   role        text not null default 'reviewer' check (role in ('reviewer','admin')),
   active      boolean not null default true,
   created_at  timestamptz not null default now()
-);
-
-create table public.student_verifications (
-  id                uuid primary key default gen_random_uuid(),
-  profile_id        uuid not null unique references public.profiles(id) on delete cascade,
-  document_path     text not null,                    -- path inside the verification-docs bucket
-  status            text not null default 'pending'
-                    check (status in ('pending','approved','rejected')),
-  reviewed_by       uuid references public.team_members(user_id) on delete set null,
-  reviewed_at       timestamptz,
-  rejection_reason  text,
-  created_at        timestamptz not null default now(),
-  constraint rejection_reason_valid
-    check (status <> 'rejected' or nullif(trim(rejection_reason), '') is not null),
-  constraint verification_review_fields_valid check (
-    (status = 'pending' and reviewed_by is null and reviewed_at is null)
-    or (status in ('approved','rejected') and reviewed_by is not null and reviewed_at is not null)
-  )
 );
 
 -- "Need -> Match": a student states what they need instead of searching
@@ -251,7 +233,6 @@ create index reviews_reviewee_idx on public.reviews (reviewee_id);
 create index need_posts_open_idx on public.need_posts (need_type, status, created_at desc);
 create index need_posts_student_idx on public.need_posts (student_id);
 create index reports_status_idx on public.reports (status);
-create index verifications_status_idx on public.student_verifications (status);
 
 
 -- ---------------------------------------------------------------------
@@ -287,7 +268,7 @@ begin
   limit 1;
 
   if v_college is null then
-    select id into v_college from public.colleges order by created_at limit 1;
+    raise exception 'Email domain is not registered to a college';
   end if;
 
   insert into public.profiles (id, college_id, full_name)
@@ -312,7 +293,7 @@ create trigger touch_profiles   before update on public.profiles   for each row 
 create trigger touch_listings   before update on public.listings   for each row execute function public.touch_updated_at();
 create trigger touch_need_posts before update on public.need_posts for each row execute function public.touch_updated_at();
 
--- Requests: the requester may only cancel; the listing owner may only accept / reject / complete
+-- Pending requests can be cancelled by the requester or accepted/rejected by the listing owner.
 create or replace function public.guard_request_update()
 returns trigger language plpgsql security definer set search_path = ''
 as $$
@@ -329,9 +310,32 @@ begin
 
   select owner_id into v_owner from public.listings where id = old.listing_id;
 
+  if new.status = old.status then
+    new.updated_at = now();
+    return new;
+  end if;
+
+  if new.status = 'completed' then
+    if exists (select 1 from public.transactions t where t.request_id = old.id and t.status = 'completed') then
+      new.updated_at = now();
+      return new;
+    end if;
+    raise exception 'a request can only complete after its transaction';
+  end if;
+
+  if new.status = 'cancelled'
+     and exists (select 1 from public.transactions t where t.request_id = old.id and t.status = 'cancelled') then
+    new.updated_at = now();
+    return new;
+  end if;
+
+  if old.status <> 'pending' then
+    raise exception 'only pending requests can be accepted, rejected or cancelled';
+  end if;
+
   if auth.uid() = v_owner then
-    if new.status not in ('accepted','rejected','completed') then
-      raise exception 'owner can only accept, reject or complete a request';
+    if new.status not in ('accepted','rejected') then
+      raise exception 'listing owner can only accept or reject a pending request';
     end if;
   elsif auth.uid() = old.requester_id then
     if new.status <> 'cancelled' then
@@ -397,15 +401,48 @@ begin
   end if;
 
   if new.request_id <> old.request_id
+     or new.request_type <> old.request_type
      or new.lender_or_seller_id <> old.lender_or_seller_id
      or new.borrower_or_buyer_id <> old.borrower_or_buyer_id
      or new.agreed_amount <> old.agreed_amount
-     or new.transaction_type <> old.transaction_type then
+     or new.transaction_type <> old.transaction_type
+     or new.start_date is distinct from old.start_date
+     or new.due_date is distinct from old.due_date
+     or new.created_at is distinct from old.created_at then
     raise exception 'transaction details cannot be changed';
   end if;
 
-  if new.status = 'completed' and old.status <> 'completed' then
-    new.completed_at = now();
+  if new.completed_at is distinct from old.completed_at then
+    raise exception 'completed_at is managed by the database';
+  end if;
+
+  if new.status is distinct from old.status then
+    if old.status in ('completed','cancelled','disputed') then
+      raise exception 'this transaction is already closed';
+    elsif new.status = 'disputed' then
+      null;
+    elsif new.status = 'cancelled'
+       and old.status = 'in_progress'
+       and auth.uid() = old.borrower_or_buyer_id then
+      null;
+    elsif old.transaction_type = 'borrow'
+       and old.status = 'in_progress'
+       and new.status = 'returned'
+       and auth.uid() = old.borrower_or_buyer_id then
+      null;
+    elsif old.transaction_type = 'borrow'
+       and old.status = 'returned'
+       and new.status = 'completed'
+       and auth.uid() = old.lender_or_seller_id then
+      new.completed_at = now();
+    elsif old.transaction_type <> 'borrow'
+       and old.status = 'in_progress'
+       and new.status = 'completed'
+       and auth.uid() in (old.lender_or_seller_id, old.borrower_or_buyer_id) then
+      new.completed_at = now();
+    else
+      raise exception 'invalid transaction status transition';
+    end if;
   end if;
   return new;
 end $$;
@@ -413,11 +450,36 @@ end $$;
 create trigger guard_transaction_update before update on public.transactions
 for each row execute function public.guard_transaction_update();
 
+-- Keep requests and sold listings in sync when a transaction completes or is cancelled.
+create or replace function public.sync_request_from_transaction()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+declare v_listing_id uuid;
+begin
+  if new.status = 'completed' and old.status is distinct from 'completed' then
+    update public.requests set status = 'completed'
+      where id = new.request_id and status = 'accepted';
+  elsif new.status = 'cancelled' and old.status is distinct from 'cancelled' then
+    update public.requests set status = 'cancelled'
+      where id = new.request_id and status = 'accepted';
+    if new.transaction_type = 'sale' then
+      select listing_id into v_listing_id from public.requests where id = new.request_id;
+      update public.listings set status = 'active'
+        where id = v_listing_id and status = 'sold';
+    end if;
+  end if;
+  return new;
+end $$;
+
+create trigger sync_request_from_transaction after update on public.transactions
+for each row execute function public.sync_request_from_transaction();
+
 -- Lock down who can call what directly through the API
 revoke execute on function public.handle_new_user()          from public, anon, authenticated;
 revoke execute on function public.guard_request_update()     from public, anon, authenticated;
 revoke execute on function public.on_request_accepted()      from public, anon, authenticated;
 revoke execute on function public.guard_transaction_update() from public, anon, authenticated;
+revoke execute on function public.sync_request_from_transaction() from public, anon, authenticated;
 revoke execute on function public.current_college_id()       from public, anon;
 revoke execute on function public.is_team_member()           from public, anon;
 revoke execute on function public.is_blocked_with(uuid)      from public, anon;
@@ -462,6 +524,31 @@ left join public.borrow_details b on b.listing_id = l.id;
 grant select on public.profile_ratings to authenticated;
 grant select on public.listing_cards   to authenticated;
 
+-- Guest visitors can browse fictional demo listings without exposing live student listings.
+create or replace view public.public_listing_cards with (security_barrier = true, security_invoker = false) as
+select
+  l.id, l.listing_type, l.title, l.description, l.status, l.created_at, l.category_id,
+  c.name as category_name, c.slug as category_slug,
+  p.full_name as owner_name,
+  r.avg_rating as owner_rating, coalesce(r.review_count, 0) as owner_review_count,
+  coalesce(sa.price, se.price) as price,
+  se.pricing_type, se.availability_notes,
+  sa.item_condition,
+  b.max_duration_days, b.expected_deposit, b.available_from, b.available_until,
+  (select li.storage_path from public.listing_images li
+    where li.listing_id = l.id order by li.sort_order, li.created_at limit 1) as cover_image_path
+from public.listings l
+join public.categories c on c.id = l.category_id
+join public.profiles p on p.id = l.owner_id
+join auth.users u on u.id = l.owner_id
+left join public.profile_ratings r on r.profile_id = l.owner_id
+left join public.sale_details sa on sa.listing_id = l.id
+left join public.service_details se on se.listing_id = l.id
+left join public.borrow_details b on b.listing_id = l.id
+where l.status = 'active' and u.email like 'demo.%@s.amity.edu';
+
+grant select on public.public_listing_cards to anon, authenticated;
+
 
 -- ---------------------------------------------------------------------
 -- 5. ROW LEVEL SECURITY
@@ -476,7 +563,6 @@ alter table public.service_details       enable row level security;
 alter table public.sale_details          enable row level security;
 alter table public.listing_images        enable row level security;
 alter table public.team_members          enable row level security;
-alter table public.student_verifications enable row level security;
 alter table public.need_posts            enable row level security;
 alter table public.requests              enable row level security;
 alter table public.transactions          enable row level security;
@@ -594,11 +680,6 @@ create policy blocks_read_own   on public.user_blocks for select to authenticate
 create policy blocks_insert_own on public.user_blocks for insert to authenticated with check (blocker_id = auth.uid() and blocked_id <> auth.uid());
 create policy blocks_delete_own on public.user_blocks for delete to authenticated using (blocker_id = auth.uid());
 
--- Verification
-create policy verif_read        on public.student_verifications for select to authenticated using (profile_id = auth.uid() or public.is_team_member());
-create policy verif_insert_own  on public.student_verifications for insert to authenticated with check (profile_id = auth.uid() and status = 'pending');
-create policy verif_team_update on public.student_verifications for update to authenticated using (public.is_team_member()) with check (public.is_team_member());
-
 create policy team_members_read on public.team_members for select to authenticated
   using (user_id = auth.uid() or public.is_team_member());
 
@@ -607,13 +688,11 @@ create policy team_members_read on public.team_members for select to authenticat
 -- 6. STORAGE BUCKETS AND POLICIES
 --   listing-images      path: {user_id}/{listing_id}/{file}   (public read)
 --   transaction-photos  path: {transaction_id}/{file}         (private, the two parties)
---   verification-docs   path: {user_id}/{file}                (private, owner + reviewers)
 -- ---------------------------------------------------------------------
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
   ('listing-images',     'listing-images',     true,  5242880, array['image/jpeg','image/png','image/webp']),
-  ('transaction-photos', 'transaction-photos', false, 5242880, array['image/jpeg','image/png','image/webp']),
-  ('verification-docs',  'verification-docs',  false, 5242880, array['image/jpeg','image/png','image/webp','application/pdf'])
+  ('transaction-photos', 'transaction-photos', false, 5242880, array['image/jpeg','image/png','image/webp'])
 on conflict (id) do nothing;
 
 create policy listing_images_read on storage.objects for select to authenticated
@@ -640,12 +719,6 @@ create policy txn_photos_storage_insert on storage.objects for insert to authent
                   and auth.uid() in (t.lender_or_seller_id, t.borrower_or_buyer_id))
   );
 
-create policy verif_docs_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'verification-docs' and (storage.foldername(name))[1] = auth.uid()::text);
-create policy verif_docs_read on storage.objects for select to authenticated
-  using (bucket_id = 'verification-docs'
-         and ((storage.foldername(name))[1] = auth.uid()::text or public.is_team_member()));
-
 
 -- ---------------------------------------------------------------------
 -- 7. REQUIRED REFERENCE DATA (the app needs these to work; not demo data)
@@ -658,6 +731,9 @@ on conflict (slug) do update set name = excluded.name, email_domains = excluded.
 insert into public.categories (name, slug, listing_type) values
   ('Electronics & Components',    'borrow-electronics',   'borrow'),
   ('Lab Equipment & Coats',       'borrow-lab',           'borrow'),
+  ('Calculators & Drafter Tools','borrow-drafting',        'borrow'),
+  ('Drawing Boards & Sheet Holders','borrow-sheet-holders','borrow'),
+  ('Canvas & Art Supplies',       'borrow-art',           'borrow'),
   ('Books & Notes',               'borrow-books',         'borrow'),
   ('Tools & Instruments',         'borrow-tools',         'borrow'),
   ('Other Items',                 'borrow-other',         'borrow'),
@@ -666,11 +742,16 @@ insert into public.categories (name, slug, listing_type) values
   ('Tutoring',                    'service-tutoring',     'service'),
   ('Photography',                 'service-photography',  'service'),
   ('Video Editing',               'service-video',        'service'),
+  ('Animation & Motion Graphics','service-animation',     'service'),
+  ('VFX & Visual Effects',        'service-vfx',          'service'),
   ('Resume Formatting',           'service-resume',       'service'),
   ('Coding Help',                 'service-coding',       'service'),
   ('Documentation & Reports',     'service-docs',         'service'),
   ('Textbooks',                   'sale-textbooks',       'sale'),
   ('Lab Coats & Uniforms',        'sale-lab-coats',       'sale'),
+  ('Drawing Boards & Sheet Holders','sale-sheet-holders', 'sale'),
+  ('Canvas & Art Supplies',       'sale-art',             'sale'),
+  ('Drafter & Drafting Tools',   'sale-drafting-tools',   'sale'),
   ('Drawing Sheets & Stationery', 'sale-stationery',      'sale'),
   ('Calculators',                 'sale-calculators',     'sale'),
   ('Project Components',          'sale-components',      'sale')

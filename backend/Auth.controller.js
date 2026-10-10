@@ -1,5 +1,5 @@
-import { asyncHandler } from '../middleware/errorHandler.js';
-import * as authService from '../services/auth.service.js';
+import { asyncHandler } from './middleware/errorHandler.js';
+import * as authService from './auth.service.js';
 
 export const signup = asyncHandler(async (req, res) => {
   res.status(201).json(await authService.signUp(req.valid.body));
