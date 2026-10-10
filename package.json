@@ -1,0 +1,15 @@
+{
+  "name": "shareshelf-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ShareShelf desktop application shell",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "app": "node desktop/launch.cjs",
+    "dev": "node desktop/launch.cjs",
+    "start": "node desktop/launch.cjs"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0"
+  }
+}

@@ -1,26 +1,29 @@
-import { supabaseAdmin } from '../config/supabase.js';
-import { isAllowedEmail } from '../config/env.js';
-import { AppError, asyncHandler } from './errorHandler.js';
-import { ensureProfile } from '../profile/profile.service.js';
+import { createUserClient, supabaseAuthClient } from './supabase.js';
+import { isAllowedEmail } from './Env.js';
+import { AppError, asyncHandler } from './middleware/errorHandler.js';
+import { ensureProfile } from './profile.service.js';
 
 /** Verifies the Supabase JWT from "Authorization: Bearer <token>" and loads the profile. */
 export const requireAuth = asyncHandler(async (req, res, next) => {
-  const [scheme, token] = (req.headers.authorization || '').split(' ');
-  if (scheme !== 'Bearer' || !token) {
+  const authorization = req.headers.authorization || '';
+  const match = authorization.match(/^Bearer\s+(\S+)$/i);
+  if (!match) {
     throw new AppError(401, 'Missing or invalid Authorization header');
   }
+  const token = match[1];
 
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  const { data, error } = await supabaseAuthClient.auth.getUser(token);
   if (error || !data?.user) throw new AppError(401, 'Invalid or expired token');
 
   if (!isAllowedEmail(data.user.email)) {
     throw new AppError(403, 'Only college email accounts can use ShareShelf');
   }
 
-  const profile = await ensureProfile(data.user);
-  if (profile.is_blocked) throw new AppError(403, 'Your account has been suspended');
+  const userClient = createUserClient(token);
+  const profile = await ensureProfile(userClient, data.user);
 
   req.user = { id: data.user.id, email: data.user.email };
   req.profile = profile;
+  req.supabase = userClient;
   next();
 });

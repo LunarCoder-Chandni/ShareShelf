@@ -7,6 +7,8 @@ export function fromSupabaseError(error) {
     '22P02': [400, 'Invalid value format'],
     '23514': [400, 'A value violates a database constraint'],
     '23502': [400, 'A required value is missing'],
+    '42501': [403, 'You are not allowed to perform this action'],
+    PGRST116: [404, 'Record not found'],
   };
   const m = map[error.code];
   if (m) return new AppError(m[0], m[1]);

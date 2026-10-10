@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set up ShareShelf</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; color: #1e293b; background: #f8fafc; font: 16px/1.6 system-ui, sans-serif; }
+    main { width: min(620px, 100%); padding: 36px; border: 1px solid #dbe3ef; border-radius: 20px; background: #fff; box-shadow: 0 16px 48px #0f172a12; }
+    h1 { margin: 0 0 10px; font-size: 30px; }
+    p { color: #64748b; }
+    code { padding: 3px 7px; border-radius: 6px; color: #1d4ed8; background: #eff6ff; }
+    li { margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ShareShelf needs its API setup</h1>
+    <p>The desktop window could not start the local backend. Set up the existing backend once, then reopen ShareShelf.</p>
+    <ol>
+      <li>Copy <code>backend/.env.example</code> to <code>backend/.env</code> and add your Supabase settings.</li>
+      <li>From the <code>backend</code> folder, run <code>npm install</code> and then <code>npm run dev</code>.</li>
+      <li>Reopen the desktop app after the API is available on port 5000.</li>
+    </ol>
+  </main>
+</body>
+</html>

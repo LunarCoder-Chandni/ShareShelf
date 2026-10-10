@@ -1,4 +1,4 @@
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { asyncHandler } from './middleware/errorHandler.js';
 import * as authService from './auth.service.js';
 
 export const signup = asyncHandler(async (req, res) => {
