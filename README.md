@@ -270,3 +270,7 @@ accessible, affordable, and reusable.
 No license is specified here. Add a `LICENSE` file if you intend to
 grant others explicit permission to reuse, modify, or distribute the
 project.
+
+## Colaborators
+Sneha- https://github.com/nova-sneha
+Divyanka- https://github.com/divyankapandey13-max
